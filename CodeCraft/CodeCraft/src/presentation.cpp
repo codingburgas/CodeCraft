@@ -805,3 +805,284 @@ void renderBudgetPanel(AppState& state)
     }
     ImGui::PopStyleColor();
 }
+// ────────────────────────────────────────────────────────────────────────────
+//  renderNotifCenter
+// ────────────────────────────────────────────────────────────────────────────
+void renderNotifCenter(AppState& state)
+{
+    if (!state.showNotifCenter) return;
+
+    ImGui::SetNextWindowSize(ImVec2(390, 300), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_PANEL);
+    ImGui::Begin("Notification Center", &state.showNotifCenter,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.35f, 1.0f));
+    if (ImGui::SmallButton("Mark all read"))
+        for (auto& n : state.notifications) n.read = true;
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Clear all"))
+        state.notifications.clear();
+    ImGui::PopStyleColor();
+    ImGui::Separator();
+
+    if (state.notifications.empty()) {
+        ImGui::TextColored(COL_MUTED, "No notifications.");
+    }
+    else {
+        for (int i = (int)state.notifications.size() - 1; i >= 0; i--) {
+            auto& n = state.notifications[i];
+            ImGui::PushID(i);
+            ImGui::TextColored(n.read ? COL_MUTED : COL_WARNING,
+                n.read ? "  %s" : "* %s", n.message.c_str());
+            if (!n.read) {
+                ImGui::SameLine(ImGui::GetContentRegionAvail().x - 36);
+                if (ImGui::SmallButton("Read")) n.read = true;
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderSettingsWindow
+// ────────────────────────────────────────────────────────────────────────────
+void renderSettingsWindow(AppState& state)
+{
+    if (!state.showSettings) return;
+
+    ImGui::SetNextWindowSize(ImVec2(360, 280), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_PANEL);
+    ImGui::Begin("Settings", &state.showSettings,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+    ImGui::TextColored(COL_ACCENT, "Account: %s", state.loggedInUser.c_str());
+    ImGui::Spacing(); ImGui::Separator();
+    ImGui::TextColored(COL_ACCENT, "Change Password");
+    ImGui::Separator();
+
+    ImGui::Text("Current password:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp1", state.cpOldPass, sizeof(state.cpOldPass),
+        ImGuiInputTextFlags_Password);
+    ImGui::Text("New password (min 6 chars):");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp2", state.cpNewPass, sizeof(state.cpNewPass),
+        ImGuiInputTextFlags_Password);
+    ImGui::Text("Confirm new password:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp3", state.cpNewPass2, sizeof(state.cpNewPass2),
+        ImGuiInputTextFlags_Password);
+
+    ImGui::Spacing();
+    if (state.cpMsg[0] != '\0')
+        ImGui::TextColored(state.cpError ? COL_ERROR : COL_SUCCESS,
+            "%s", state.cpMsg);
+    ImGui::Spacing();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.45f, 0.90f, 1.0f));
+    if (ImGui::Button("Change Password", ImVec2(-1, 30))) {
+        memset(state.cpMsg, 0, sizeof(state.cpMsg));
+        if (string(state.cpNewPass) != string(state.cpNewPass2)) {
+            snprintf(state.cpMsg, sizeof(state.cpMsg), "Passwords do not match.");
+            state.cpError = true;
+        }
+        else if (changePassword(state.users, state.loggedInUser,
+            state.cpOldPass, state.cpNewPass)) {
+            snprintf(state.cpMsg, sizeof(state.cpMsg), "Password changed successfully.");
+            state.cpError = false;
+            memset(state.cpOldPass, 0, sizeof(state.cpOldPass));
+            memset(state.cpNewPass, 0, sizeof(state.cpNewPass));
+            memset(state.cpNewPass2, 0, sizeof(state.cpNewPass2));
+            addNotification(state, "Your password was changed successfully.");
+        }
+        else {
+            snprintf(state.cpMsg, sizeof(state.cpMsg),
+                "Error - check current password.");
+            state.cpError = true;
+        }
+    }
+    ImGui::PopStyleColor();
+    ImGui::End();
+    ImGui::PopStyleColor();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderStatusBar
+// ────────────────────────────────────────────────────────────────────────────
+void renderStatusBar(const AppState& state)
+{
+    if (state.statusMsg[0] == '\0') return;
+    ImGui::Separator();
+    ImGui::TextColored(state.statusError ? COL_ERROR : COL_SUCCESS,
+        "%s", state.statusMsg);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderDashboard
+// ────────────────────────────────────────────────────────────────────────────
+void renderDashboard(AppState& state)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::Begin("##dash", nullptr,
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::PopStyleVar(2);
+
+    renderHeader(state);
+
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+
+    ImGui::BeginChild("##left", ImVec2(avail.x * 0.58f, avail.y - 26), false);
+    renderExpenseTable(state);
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::BeginChild("##right", ImVec2(0, avail.y - 26), false);
+    if (ImGui::BeginTabBar("##tabs")) {
+
+        // FIX: Add and Edit are separate tabs.
+        // When Edit is clicked switchToEdit=true which sets SetSelected on
+        // the Edit tab so it activates automatically on the next frame.
+        ImGuiTabItemFlags editFlags = 0;
+        if (state.switchToEdit && state.editIdx >= 0) {
+            editFlags = ImGuiTabItemFlags_SetSelected;
+            state.switchToEdit = false;  // consume flag - switch only once
+        }
+
+        // Add tab - always available, shows empty form
+        if (ImGui::BeginTabItem(" Add ")) {
+            // Reset editIdx if user manually clicks Add tab
+            if (state.editIdx >= 0) {
+                state.editIdx = -1;
+                state.switchToEdit = false;
+                memset(state.formDesc, 0, sizeof(state.formDesc));
+                state.formAmount = 0.0f;
+                state.formCategory = 0;
+                state.formDay = 1;
+                state.formMonth = 1;
+                state.formYear = 2024;
+            }
+            renderFormPanel(state);
+            ImGui::EndTabItem();
+        }
+
+        // Edit tab - activated automatically when Edit button is pressed
+        if (ImGui::BeginTabItem(" Edit ", nullptr, editFlags)) {
+            if (state.editIdx >= 0) {
+                renderFormPanel(state);
+            }
+            else {
+                ImGui::Spacing();
+                ImGui::TextColored(COL_MUTED,
+                    "Click Edit on an expense in the table to edit it.");
+            }
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem(" Search ")) {
+            renderSearchPanel(state);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem(" Statistics ")) {
+            renderStatsPanel(state);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem(" Budget ")) {
+            renderBudgetPanel(state);
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+    ImGui::EndChild();
+
+    renderStatusBar(state);
+    ImGui::End();
+
+    renderSettingsWindow(state);
+    renderNotifCenter(state);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderApp
+// ────────────────────────────────────────────────────────────────────────────
+void renderApp(AppState& state)
+{
+    switch (state.currentScreen) {
+    case SCREEN_LOGIN:     renderLoginScreen(state);    break;
+    case SCREEN_REGISTER:  renderRegisterScreen(state); break;
+    case SCREEN_DASHBOARD: renderDashboard(state);      break;
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  mainMenu
+// ────────────────────────────────────────────────────────────────────────────
+void mainMenu()
+{
+    if (!glfwInit()) return;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    GLFWwindow* window = glfwCreateWindow(1280, 720,
+        "Expense Tracker", nullptr, nullptr);
+    if (!window) { glfwTerminate(); return; }
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
+
+    ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 6.0f;
+    style.FrameRounding = 4.0f;
+    style.TabRounding = 4.0f;
+    style.FramePadding = ImVec2(6, 4);
+    style.ItemSpacing = ImVec2(8, 5);
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    AppState state;
+    state.allExpenses = loadAllExpenses();
+    state.users = loadAllUsers();
+    state.budgets = loadAllBudgets();
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        renderApp(state);
+
+        ImGui::Render();
+        int w, h;
+        glfwGetFramebufferSize(window, &w, &h);
+        glViewport(0, 0, w, h);
+        glClearColor(0.08f, 0.09f, 0.12f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
