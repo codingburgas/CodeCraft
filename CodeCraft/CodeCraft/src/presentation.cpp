@@ -493,3 +493,315 @@ void renderExpenseTable(AppState& state)
     // context - ImGui cannot find the popup and Del never works.
     renderDeleteModal(state);
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderFormPanel  (shared by Add and Edit tabs)
+// ────────────────────────────────────────────────────────────────────────────
+void renderFormPanel(AppState& state)
+{
+    bool editing = (state.editIdx >= 0);
+    ImGui::TextColored(COL_ACCENT, editing ? "Edit Expense" : "Add Expense");
+    ImGui::Separator();
+
+    ImGui::Text("Description:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##desc", state.formDesc, sizeof(state.formDesc));
+
+    ImGui::Text("Amount ($):");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputFloat("##amt", &state.formAmount, 0.01f, 1.0f, "%.2f");
+
+    ImGui::Text("Category:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::Combo("##cat", &state.formCategory, CAT_NAMES, CAT_COUNT);
+
+    // FIX: wider date fields so numbers are fully visible
+    ImGui::Text("Date:");
+    ImGui::SetNextItemWidth(76);
+    ImGui::InputInt("Day##d", &state.formDay, 1, 0);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(76);
+    ImGui::InputInt("Mo##m", &state.formMonth, 1, 0);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(88);
+    ImGui::InputInt("Year##y", &state.formYear, 1, 10);
+
+    ImGui::Spacing(); ImGui::Separator();
+
+    ImGui::PushStyleColor(ImGuiCol_Button,
+        editing ? ImVec4(0.15f, 0.55f, 0.15f, 1.0f)
+        : ImVec4(0.15f, 0.45f, 0.90f, 1.0f));
+    if (ImGui::Button(editing ? "Save Changes##s" : "Add Expense##s", ImVec2(-1, 34))) {
+        string   desc(state.formDesc);
+        double   amt = (double)state.formAmount;
+        Category cat = (Category)state.formCategory;
+        bool     ok = false;
+
+        if (editing) {
+            int targetId = state.expenses[state.editIdx].id;
+            int globalIdx = -1;
+            for (int k = 0; k < (int)state.allExpenses.size(); k++)
+                if (state.allExpenses[k].id == targetId) { globalIdx = k; break; }
+            if (globalIdx >= 0) {
+                ok = editExpense(state.allExpenses, globalIdx, desc, amt, cat,
+                    state.formDay, state.formMonth, state.formYear);
+                if (ok) refreshExpenses(state);
+            }
+            setStatus(state, ok ? "Expense updated." : "Error - check your input.", !ok);
+            if (ok) { state.editIdx = -1; state.switchToEdit = false; }
+        }
+        else {
+            // FIX: addExpense call with all required parameters
+            ok = addExpense(state.allExpenses, state.loggedInUser,
+                desc, amt, cat,
+                state.formDay, state.formMonth, state.formYear);
+            if (ok) {
+                refreshExpenses(state);
+                checkBudgetNotifications(state);
+            }
+            setStatus(state, ok ? "Expense added." : "Error - check your input.", !ok);
+        }
+
+        if (ok) {
+            // Reset form fields after successful save
+            memset(state.formDesc, 0, sizeof(state.formDesc));
+            state.formAmount = 0.0f;
+            state.formCategory = 0;
+            state.formDay = 1;
+            state.formMonth = 1;
+            state.formYear = 2024;
+        }
+    }
+    ImGui::PopStyleColor();
+
+    if (editing) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+        if (ImGui::Button("Cancel##c", ImVec2(-1, 28))) {
+            state.editIdx = -1;
+            state.switchToEdit = false;
+        }
+        ImGui::PopStyleColor();
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderSearchPanel
+// ────────────────────────────────────────────────────────────────────────────
+void renderSearchPanel(AppState& state)
+{
+    ImGui::TextColored(COL_ACCENT, "Linear Search by Description");
+    ImGui::Separator();
+
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 90);
+    ImGui::InputText("##kw", state.searchKeyword, sizeof(state.searchKeyword));
+    ImGui::SameLine();
+    if (ImGui::Button("Search##l", ImVec2(-1, 0))) {
+        state.linearResults = linearSearch(state.expenses, state.searchKeyword);
+        state.linearDone = true;
+    }
+    if (state.linearDone) {
+        if (state.linearResults.empty()) {
+            ImGui::TextColored(COL_ERROR, "No results found.");
+        }
+        else {
+            ImGui::TextColored(COL_SUCCESS, "Found: %d record(s)", (int)state.linearResults.size());
+            for (int idx : state.linearResults) {
+                const Expense& e = state.expenses[idx];
+                ImGui::BulletText("%s  $%.2f  (%s)  %02d/%02d/%d",
+                    e.description.c_str(), e.amount,
+                    CAT_NAMES[e.category], e.month, e.day, e.year);
+            }
+        }
+    }
+
+    ImGui::Spacing(); ImGui::Separator();
+    ImGui::TextColored(COL_ACCENT, "Binary Search by Exact Amount");
+    ImGui::Separator();
+
+    ImGui::SetNextItemWidth(140);
+    ImGui::InputFloat("$##bs", &state.searchAmount, 0.01f, 1.0f, "%.2f");
+    ImGui::SameLine();
+    if (ImGui::Button("Search##b", ImVec2(-1, 0))) {
+        vector<Expense> sorted = state.expenses;
+        bubbleSortByAmount(sorted);
+        int found = binarySearch(sorted, (double)state.searchAmount);
+        state.binaryResult = -1;
+        if (found >= 0)
+            for (int k = 0; k < (int)state.expenses.size(); k++)
+                if (state.expenses[k].id == sorted[found].id)
+                {
+                    state.binaryResult = k; break;
+                }
+        state.binaryDone = true;
+    }
+    if (state.binaryDone) {
+        if (state.binaryResult < 0)
+            ImGui::TextColored(COL_ERROR,
+                "No expense with amount $%.2f.", state.searchAmount);
+        else {
+            const Expense& e = state.expenses[state.binaryResult];
+            ImGui::TextColored(COL_SUCCESS,
+                "Found: %s  $%.2f  (%s)  %02d/%02d/%d",
+                e.description.c_str(), e.amount,
+                CAT_NAMES[e.category], e.month, e.day, e.year);
+        }
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderStatsPanel
+// ────────────────────────────────────────────────────────────────────────────
+void renderStatsPanel(AppState& state)
+{
+    ImGui::TextColored(COL_ACCENT, "Statistics");
+    ImGui::Separator();
+
+    if (state.expenses.empty()) {
+        ImGui::TextColored(COL_MUTED, "No expenses to analyse.");
+        return;
+    }
+
+    double total = totalExpenses(state.expenses);
+    double avg = avgExpense(state.expenses);
+    double highest = maxExpense(state.expenses);
+    double lowest = minExpense(state.expenses);
+
+    ImGui::Text("Total:   "); ImGui::SameLine(); ImGui::TextColored(COL_ACCENT, "$%.2f", total);
+    ImGui::Text("Average: "); ImGui::SameLine(); ImGui::TextColored(COL_ACCENT, "$%.2f", avg);
+    ImGui::Text("Highest: "); ImGui::SameLine(); ImGui::TextColored(COL_ERROR, "$%.2f", highest);
+    ImGui::Text("Lowest:  "); ImGui::SameLine(); ImGui::TextColored(COL_SUCCESS, "$%.2f", lowest);
+    ImGui::Text("Count:   "); ImGui::SameLine(); ImGui::TextColored(COL_ACCENT, "%d records", (int)state.expenses.size());
+
+    ImGui::Spacing();
+    ImGui::Text("By category:");
+    ImGui::Separator();
+
+    double catTot[CAT_COUNT] = {};
+    categoryTotals(state.expenses, catTot);
+    for (int i = 0; i < CAT_COUNT; i++) {
+        if (catTot[i] < 0.001) continue;
+        float frac = (float)(catTot[i] / total);
+        int   cnt = recursiveCountByCategory(
+            state.expenses, (int)state.expenses.size() - 1, (Category)i);
+        char lbl[64];
+        snprintf(lbl, sizeof(lbl), "$%.2f (%d)", catTot[i], cnt);
+        ImGui::TextColored(CAT_COLS[i], "%-14s", CAT_NAMES[i]);
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, CAT_COLS[i]);
+        ImGui::ProgressBar(frac, ImVec2(-1, 13), lbl);
+        ImGui::PopStyleColor();
+    }
+
+    // FIX: Monthly breakdown uses statsYear (separate from table filterYear)
+    ImGui::Spacing(); ImGui::Separator();
+    ImGui::Text("Monthly breakdown:");
+
+    // FIX: wider input field so year value is fully visible
+    ImGui::SetNextItemWidth(90);
+    ImGui::InputInt("Year##sy", &state.statsYear, 1, 10);
+    ImGui::Separator();
+
+    double monthTotals[13] = {};
+    for (int m = 1; m <= 12; m++)
+        monthTotals[m] = recursiveMonthlyTotal(
+            state.expenses, (int)state.expenses.size() - 1, m, state.statsYear);
+
+    double maxMonth = 0.0;
+    for (int m = 1; m <= 12; m++)
+        if (monthTotals[m] > maxMonth) maxMonth = monthTotals[m];
+
+    bool anyMonth = false;
+    for (int m = 1; m <= 12; m++) {
+        if (monthTotals[m] < 0.001) continue;
+        anyMonth = true;
+        float frac = (maxMonth > 0.0) ? (float)(monthTotals[m] / maxMonth) : 0.0f;
+        char lbl[32];
+        snprintf(lbl, sizeof(lbl), "$%.2f", monthTotals[m]);
+        // FIX: month name padded to consistent width so bar always starts same position
+        ImGui::TextColored(COL_ACCENT, "%-11s", MONTHS[m]);
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, COL_ACCENT);
+        ImGui::ProgressBar(frac, ImVec2(-1, 13), lbl);
+        ImGui::PopStyleColor();
+    }
+    if (!anyMonth)
+        ImGui::TextColored(COL_MUTED, "No expenses in %d.", state.statsYear);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderBudgetPanel
+// ────────────────────────────────────────────────────────────────────────────
+void renderBudgetPanel(AppState& state)
+{
+    ImGui::TextColored(COL_ACCENT, "Monthly Budget");
+    ImGui::Separator();
+
+    // Budget note: only COMPLETED (Done) expenses count toward budget usage
+    ImGui::TextColored(COL_MUTED,
+        "Note: only expenses marked as Done count toward budget.");
+    ImGui::Spacing();
+
+    ImGui::Text("Select month:");
+    int bm = state.budgetMonth - 1;
+    ImGui::SetNextItemWidth(115);
+    ImGui::Combo("##bm", &bm, MONTHS + 1, 12);
+    state.budgetMonth = bm + 1;
+    ImGui::SameLine();
+    // FIX: wider year input
+    ImGui::SetNextItemWidth(88);
+    ImGui::InputInt("##by", &state.budgetYear, 1, 10);
+
+    double used = getBudgetUsed(state.allExpenses, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    double limit = getBudget(state.budgets, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+
+    ImGui::Spacing();
+
+    if (limit > 0.0) {
+        float frac = (float)(used / limit);
+        if (frac > 1.0f) frac = 1.0f;
+
+        ImGui::Text("Spent (Done): $%.2f  /  Limit: $%.2f  (%.1f%%)",
+            used, limit, used / limit * 100.0);
+
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+            used >= limit ? COL_ERROR :
+            used >= limit * 0.9 ? COL_WARNING : COL_SUCCESS);
+        ImGui::ProgressBar(frac, ImVec2(-1, 22));
+        ImGui::PopStyleColor();
+
+        if (used >= limit)
+            ImGui::TextColored(COL_ERROR,
+                "!! Budget exceeded by $%.2f !!", used - limit);
+        else if (used >= limit * 0.9)
+            ImGui::TextColored(COL_WARNING,
+                "! %.1f%% used - $%.2f remaining", used / limit * 100.0, limit - used);
+        else
+            ImGui::TextColored(COL_SUCCESS,
+                "%.1f%% used - $%.2f remaining", used / limit * 100.0, limit - used);
+    }
+    else {
+        ImGui::TextColored(COL_MUTED, "No budget set for %s %d.",
+            MONTHS[state.budgetMonth], state.budgetYear);
+    }
+
+    ImGui::Spacing(); ImGui::Separator();
+    ImGui::Text("Set new limit ($):");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputFloat("##bl", &state.budgetLimit, 1.0f, 10.0f, "%.2f");
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.45f, 0.90f, 1.0f));
+    if (ImGui::Button("Set Budget", ImVec2(-1, 30))) {
+        bool ok = setBudget(state.budgets, state.loggedInUser,
+            state.budgetMonth, state.budgetYear,
+            (double)state.budgetLimit);
+        if (ok) {
+            state.notif90Sent = false;
+            state.notif100Sent = false;
+            checkBudgetNotifications(state);
+        }
+        setStatus(state, ok ? "Budget saved." : "Error - limit must be > 0.", !ok);
+    }
+    ImGui::PopStyleColor();
+}
