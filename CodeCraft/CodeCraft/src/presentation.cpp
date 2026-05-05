@@ -241,3 +241,255 @@ void renderRegisterScreen(AppState& state)
     ImGui::End();
     ImGui::PopStyleColor();
 }
+// ────────────────────────────────────────────────────────────────────────────
+//  renderHeader
+// ────────────────────────────────────────────────────────────────────────────
+void renderHeader(AppState& state)
+{
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.11f, 0.15f, 1.0f));
+    ImGui::BeginChild("##hdr", ImVec2(0, 52), false);
+
+    ImGui::SetCursorPos(ImVec2(10, 8));
+    ImGui::PushStyleColor(ImGuiCol_Text, COL_ACCENT);
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Expense Tracker");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::PopStyleColor();
+
+    // Budget warning - uses completed expenses only
+    double used = getBudgetUsed(state.allExpenses, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    double limit = getBudget(state.budgets, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    if (limit > 0.0 && used >= limit * 0.9) {
+        ImGui::SameLine(190);
+        ImGui::SetCursorPosY(14);
+        ImGui::TextColored(used >= limit ? COL_ERROR : COL_WARNING,
+            used >= limit ? "!! Budget exceeded !!" : "! Approaching budget limit");
+    }
+
+    double total = totalExpenses(state.expenses);
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 360);
+    ImGui::SetCursorPosY(10);
+    ImGui::TextColored(COL_MUTED, "Total:"); ImGui::SameLine();
+    ImGui::TextColored(COL_ACCENT, "$%.2f", total);
+    ImGui::SameLine(0, 16);
+    ImGui::TextColored(COL_MUTED, "User:"); ImGui::SameLine();
+    ImGui::TextColored(COL_SUCCESS, "%s", state.loggedInUser.c_str());
+    ImGui::SameLine(0, 12);
+
+    int unread = unreadCount(state);
+    char bellLbl[32];
+    snprintf(bellLbl, sizeof(bellLbl),
+        unread > 0 ? "Bell(%d)##nb" : "Bell##nb", unread);
+    ImGui::PushStyleColor(ImGuiCol_Button,
+        unread > 0 ? ImVec4(0.8f, 0.5f, 0.1f, 1.0f) : ImVec4(0.3f, 0.3f, 0.35f, 1.0f));
+    if (ImGui::SmallButton(bellLbl)) state.showNotifCenter = !state.showNotifCenter;
+    ImGui::PopStyleColor();
+    ImGui::SameLine(0, 4);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.35f, 1.0f));
+    if (ImGui::SmallButton("Settings")) state.showSettings = !state.showSettings;
+    ImGui::PopStyleColor();
+    ImGui::SameLine(0, 4);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::SmallButton("Logout")) {
+        state.loggedInUser = "";
+        state.currentScreen = SCREEN_LOGIN;
+        state.expenses.clear();
+        state.notifications.clear();
+        state.editIdx = -1;
+        state.deleteIdx = -1;
+        state.switchToEdit = false;
+        state.notif90Sent = false;
+        state.notif100Sent = false;
+        memset(state.statusMsg, 0, sizeof(state.statusMsg));
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderDeleteModal
+// ────────────────────────────────────────────────────────────────────────────
+void renderDeleteModal(AppState& state)
+{
+    if (!ImGui::BeginPopupModal("Delete?", nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize)) return;
+
+    ImGui::Text("Are you sure you want to delete this record?");
+    ImGui::Spacing();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button("Yes, delete", ImVec2(120, 0))) {
+        if (state.deleteIdx >= 0 && state.deleteIdx < (int)state.expenses.size()) {
+            int targetId = state.expenses[state.deleteIdx].id;
+            int globalIdx = -1;
+            for (int k = 0; k < (int)state.allExpenses.size(); k++)
+                if (state.allExpenses[k].id == targetId) { globalIdx = k; break; }
+            if (globalIdx >= 0) {
+                removeExpense(state.allExpenses, globalIdx);
+                refreshExpenses(state);
+                setStatus(state, "Expense deleted.");
+            }
+            state.deleteIdx = -1;
+        }
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        state.deleteIdx = -1;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderExpenseTable
+// ────────────────────────────────────────────────────────────────────────────
+void renderExpenseTable(AppState& state)
+{
+    ImGui::Text("Sort:"); ImGui::SameLine();
+    ImGui::RadioButton("Amount", &state.sortMode, 0); ImGui::SameLine();
+    ImGui::RadioButton("Date", &state.sortMode, 1); ImGui::SameLine();
+    ImGui::RadioButton("Category", &state.sortMode, 2);
+
+    ImGui::SameLine(0, 16); ImGui::Text("Month:"); ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::Combo("##fm", &state.filterMonth, MONTHS, 13);
+    if (state.filterMonth > 0) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(72);
+        ImGui::InputInt("##fy", &state.filterYear, 1, 10);
+    }
+
+    // Category filter using persistent CAT_NAMES
+    ImGui::SameLine(0, 16); ImGui::Text("Cat:"); ImGui::SameLine();
+    ImGui::SetNextItemWidth(110);
+    const char* catCombo[CAT_COUNT + 1];
+    catCombo[0] = "All";
+    for (int i = 0; i < CAT_COUNT; i++) catCombo[i + 1] = CAT_NAMES[i];
+    int catFilter = state.filterCat + 1;
+    ImGui::Combo("##fc", &catFilter, catCombo, CAT_COUNT + 1);
+    state.filterCat = catFilter - 1;
+
+    ImGui::SameLine(0, 16);
+    ImGui::Checkbox("Amt range", &state.useAmountFilter);
+    if (state.useAmountFilter) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(65);
+        ImGui::InputFloat("##fmn", &state.filterMinAmt, 0, 0, "%.0f");
+        ImGui::SameLine(); ImGui::Text("-"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(65);
+        ImGui::InputFloat("##fmx", &state.filterMaxAmt, 0, 0, "%.0f");
+    }
+
+    vector<Expense> disp = state.expenses;
+    if (state.filterMonth > 0)
+        disp = filterByMonth(disp, state.filterMonth, state.filterYear);
+    if (state.filterCat >= 0)
+        disp = filterByCategory(disp, (Category)state.filterCat);
+    if (state.useAmountFilter && state.filterMaxAmt > state.filterMinAmt)
+        disp = filterByRange(disp, state.filterMinAmt, state.filterMaxAmt);
+
+    if (state.sortMode == 0) bubbleSortByAmount(disp);
+    else if (state.sortMode == 1 && !disp.empty())
+        quickSortByDate(disp, 0, (int)disp.size() - 1);
+    else if (state.sortMode == 2) bubbleSortByCategory(disp);
+
+    ImGui::Separator();
+    ImGui::TextColored(COL_MUTED, "%d record(s)", (int)disp.size());
+    ImGui::Separator();
+
+    const ImGuiTableFlags tflags =
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+
+    float tableH = ImGui::GetContentRegionAvail().y - 28.0f;
+    if (ImGui::BeginTable("##tbl", 8, tflags, ImVec2(0, tableH))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 34);
+        ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Amount($)", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, 112);
+        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 90);
+        ImGui::TableSetupColumn("Done", ImGuiTableColumnFlags_WidthFixed, 44);
+        ImGui::TableSetupColumn("Edit", ImGuiTableColumnFlags_WidthFixed, 38);
+        ImGui::TableSetupColumn("Del", ImGuiTableColumnFlags_WidthFixed, 34);
+        ImGui::TableHeadersRow();
+
+        for (int i = 0; i < (int)disp.size(); i++) {
+            const Expense& e = disp[i];
+            int userIdx = -1;
+            for (int k = 0; k < (int)state.expenses.size(); k++)
+                if (state.expenses[k].id == e.id) { userIdx = k; break; }
+
+            ImGui::TableNextRow();
+            ImVec4 textCol = e.completed
+                ? COL_DONE : ImGui::GetStyleColorVec4(ImGuiCol_Text);
+
+            ImGui::TableSetColumnIndex(0); ImGui::TextColored(textCol, "%d", e.id);
+            ImGui::TableSetColumnIndex(1); ImGui::TextColored(textCol, "%s", e.description.c_str());
+            ImGui::TableSetColumnIndex(2); ImGui::TextColored(textCol, "%.2f", e.amount);
+            ImGui::TableSetColumnIndex(3);
+            ImGui::TextColored(e.completed ? COL_DONE : CAT_COLS[e.category],
+                "%s", CAT_NAMES[e.category]);
+            ImGui::TableSetColumnIndex(4);
+            ImGui::TextColored(textCol, "%02d/%02d/%04d", e.month, e.day, e.year);
+
+            // Done toggle
+            ImGui::TableSetColumnIndex(5);
+            ImGui::PushID(e.id * 10 + 3);
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                e.completed ? ImVec4(0.2f, 0.6f, 0.2f, 0.85f)
+                : ImVec4(0.3f, 0.3f, 0.38f, 0.85f));
+            if (ImGui::SmallButton(e.completed ? "Undo" : "Done") && userIdx >= 0) {
+                int tid = state.expenses[userIdx].id;
+                for (int k = 0; k < (int)state.allExpenses.size(); k++) {
+                    if (state.allExpenses[k].id == tid) {
+                        toggleCompleted(state.allExpenses, k);
+                        refreshExpenses(state);
+                        break;
+                    }
+                }
+            }
+            ImGui::PopStyleColor(); ImGui::PopID();
+
+            // Edit
+            ImGui::TableSetColumnIndex(6);
+            ImGui::PushID(e.id * 10 + 1);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.9f, 0.85f));
+            if (ImGui::SmallButton("Edit") && userIdx >= 0) {
+                state.editIdx = userIdx;
+                state.switchToEdit = true;
+                snprintf(state.formDesc, sizeof(state.formDesc), "%s", e.description.c_str());
+                state.formAmount = (float)e.amount;
+                state.formCategory = (int)e.category;
+                state.formDay = e.day;
+                state.formMonth = e.month;
+                state.formYear = e.year;
+            }
+            ImGui::PopStyleColor(); ImGui::PopID();
+
+            // Delete
+            ImGui::TableSetColumnIndex(7);
+            ImGui::PushID(e.id * 10 + 2);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.85f));
+            if (ImGui::SmallButton("Del") && userIdx >= 0) {
+                state.deleteIdx = userIdx;
+                ImGui::OpenPopup("Delete?");
+            }
+            ImGui::PopStyleColor(); ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    // FIX: renderDeleteModal must be OUTSIDE the table loop.
+    // Calling it inside the loop means each row creates a different popup
+    // context - ImGui cannot find the popup and Del never works.
+    renderDeleteModal(state);
+}
