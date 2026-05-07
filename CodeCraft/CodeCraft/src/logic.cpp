@@ -195,3 +195,139 @@ bool removeExpense(vector<Expense>& v, int idx)
     if (ok) v.erase(v.begin() + idx);
     return ok;
 }
+// Toggles the completed flag and saves to disk
+bool toggleCompleted(vector<Expense>& v, int idx)
+{
+    if (idx < 0 || idx >= (int)v.size()) return false;
+    v[idx].completed = !v[idx].completed;
+    return updateExpense(v);
+}
+
+// ── FILTERING ─────────────────────────────────────────────────────────────
+
+vector<Expense> userExpenses(const vector<Expense>& all, const string& username)
+{
+    vector<Expense> r;
+    for (const auto& e : all) if (e.username == username) r.push_back(e);
+    return r;
+}
+
+vector<Expense> filterByMonth(const vector<Expense>& v, int month, int year)
+{
+    vector<Expense> r;
+    for (const auto& e : v) if (e.month == month && e.year == year) r.push_back(e);
+    return r;
+}
+
+vector<Expense> filterByCategory(const vector<Expense>& v, Category cat)
+{
+    vector<Expense> r;
+    for (const auto& e : v) if (e.category == cat) r.push_back(e);
+    return r;
+}
+
+vector<Expense> filterByRange(const vector<Expense>& v, double minA, double maxA)
+{
+    vector<Expense> r;
+    for (const auto& e : v) if (e.amount >= minA && e.amount <= maxA) r.push_back(e);
+    return r;
+}
+
+// ── STATISTICS ────────────────────────────────────────────────────────────
+
+double totalExpenses(const vector<Expense>& v)
+{
+    return recursiveTotal(v, 0, (int)v.size());
+}
+
+double avgExpense(const vector<Expense>& v)
+{
+    return v.empty() ? 0.0 : totalExpenses(v) / v.size();
+}
+
+double maxExpense(const vector<Expense>& v)
+{
+    double m = 0.0;
+    for (const auto& e : v) if (e.amount > m) m = e.amount;
+    return m;
+}
+
+double minExpense(const vector<Expense>& v)
+{
+    if (v.empty()) return 0.0;
+    double m = v[0].amount;
+    for (const auto& e : v) if (e.amount < m) m = e.amount;
+    return m;
+}
+
+void categoryTotals(const vector<Expense>& v, double totals[CAT_COUNT])
+{
+    for (int i = 0; i < CAT_COUNT; i++) totals[i] = 0.0;
+    for (const auto& e : v) totals[(int)e.category] += e.amount;
+}
+
+// ── BUDGET ────────────────────────────────────────────────────────────────
+
+bool setBudget(vector<Budget>& b, const string& user, int month, int year, double limit)
+{
+    if (limit <= 0.0) return false;
+    for (auto& x : b)
+        if (x.username == user && x.month == month && x.year == year)
+        {
+            x.limit = limit; return saveBudgets(b);
+        }
+    b.push_back({ user, month, year, limit });
+    return saveBudgets(b);
+}
+
+double getBudget(const vector<Budget>& b, const string& user, int month, int year)
+{
+    for (const auto& x : b)
+        if (x.username == user && x.month == month && x.year == year) return x.limit;
+    return 0.0;
+}
+
+// Sums all expenses for the user in the given month/year
+double getBudgetUsed(const vector<Expense>& v, const string& user, int month, int year)
+{
+    double total = 0.0;
+    for (const auto& e : v)
+        if (e.username == user && e.month == month && e.year == year)
+            total += e.amount;
+    return total;
+}
+
+// ── VALIDATION ────────────────────────────────────────────────────────────
+
+bool isValidDate(int day, int month, int year)
+{
+    if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1) return false;
+    const int dim[] = { 0,31,28,31,30,31,30,31,31,30,31,30,31 };
+    int maxDay = dim[month];
+    if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))) maxDay = 29;
+    return day <= maxDay;
+}
+
+bool isValidAmount(double a) { return a > 0.0 && a <= MAX_AMOUNT; }
+bool isValidPassword(const string& s) { return s.size() >= 6; }
+
+bool isValidUsername(const string& s)
+{
+    if (s.size() < 3 || s.size() > 20) return false;
+    for (char c : s) if (!isalnum(c) && c != '_') return false;
+    return true;
+}
+
+bool isValidEmail(const string& s)
+{
+    size_t at = s.find('@');
+    if (at == string::npos || at == 0) return false;
+    size_t dot = s.find('.', at);
+    return dot != string::npos && dot > at + 1 && dot < s.size() - 1;
+}
+
+// ── LOADERS ───────────────────────────────────────────────────────────────
+
+vector<Expense> loadAllExpenses() { vector<Expense> v; loadExpenses(v); return v; }
+vector<User>    loadAllUsers() { vector<User>    v; loadUsers(v);    return v; }
+vector<Budget>  loadAllBudgets() { vector<Budget>  v; loadBudgets(v);  return v; }
