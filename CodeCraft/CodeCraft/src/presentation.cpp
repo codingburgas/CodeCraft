@@ -994,3 +994,354 @@ void renderSearchPanel(AppState& state)
         state.linearResults = linearSearch(state.expenses, state.searchKeyword);
         state.linearDone = true;
     }
+    popBtnStyle();
+
+    if (state.linearDone) {
+        ImGui::Spacing();
+        if (state.linearResults.empty()) {
+            ImGui::TextColored(COL_ERROR, "  No results found.");
+        }
+        else {
+            ImGui::TextColored(COL_SUCCESS, "  Found: %d record(s)",
+                (int)state.linearResults.size());
+            ImGui::Spacing();
+            for (int idx : state.linearResults) {
+                const Expense& e = state.expenses[idx];
+                ImVec2 cp = ImGui::GetCursorScreenPos();
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                    cp, ImVec2(cp.x + ImGui::GetContentRegionAvail().x,
+                        cp.y + ImGui::GetTextLineHeightWithSpacing() + 2),
+                    IM_COL32(25, 55, 110, 80), 3.0f);
+                ImGui::TextColored(CAT_COLS[e.category], "  %-24s",
+                    e.description.c_str());
+                ImGui::SameLine();
+                ImGui::TextColored(COL_ACCENT2, "$%-8.2f", e.amount);
+                ImGui::SameLine();
+                ImGui::TextColored(COL_MUTED, "%02d/%02d/%d",
+                    e.month, e.day, e.year);
+            }
+        }
+    }
+
+    ImGui::Spacing();
+    sectionHeader("Binary Search  —  by Exact Amount");
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+    ImGui::SetNextItemWidth(150);
+    ImGui::InputFloat("$##bs", &state.searchAmount, 0.01f, 1.0f, "%.2f");
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    pushBtnStyle(COL_BTN_PRIMARY);
+    if (ImGui::Button("Search##b", ImVec2(-1, 0))) {
+        vector<Expense> sorted = state.expenses;
+        bubbleSortByAmount(sorted);
+        int found = binarySearch(sorted, (double)state.searchAmount);
+        state.binaryResult = -1;
+        if (found >= 0)
+            for (int k = 0; k < (int)state.expenses.size(); k++)
+                if (state.expenses[k].id == sorted[found].id)
+                {
+                    state.binaryResult = k; break;
+                }
+        state.binaryDone = true;
+    }
+    popBtnStyle();
+
+    if (state.binaryDone) {
+        ImGui::Spacing();
+        if (state.binaryResult < 0) {
+            ImGui::TextColored(COL_ERROR,
+                "  No expense with amount $%.2f.", state.searchAmount);
+        }
+        else {
+            const Expense& e = state.expenses[state.binaryResult];
+            ImGui::TextColored(COL_SUCCESS,
+                "  Found: %s  $%.2f  (%s)  %02d/%02d/%d",
+                e.description.c_str(), e.amount,
+                CAT_NAMES[e.category], e.month, e.day, e.year);
+        }
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderStatsPanel
+// ────────────────────────────────────────────────────────────────────────────
+void renderStatsPanel(AppState& state)
+{
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    sectionHeader("Statistics");
+
+    if (state.expenses.empty()) {
+        ImGui::TextColored(COL_MUTED, "No expenses to analyse.");
+        return;
+    }
+
+    double total = totalExpenses(state.expenses);
+    double avg = avgExpense(state.expenses);
+    double highest = maxExpense(state.expenses);
+    double lowest = minExpense(state.expenses);
+
+    // ── 4 summary cards ──────────────────────────────────────────────────────
+    struct CardDef { const char* label; const char* icon; double val; ImU32 glowC; ImVec4 textC; };
+    CardDef cards[4] = {
+        { "Total Spent",  "$", total,   IM_COL32(50,120,255,60),  COL_ACCENT  },
+        { "Average",      "~", avg,     IM_COL32(50,200,255,50),  COL_ACCENT2 },
+        { "Highest",      "^", highest, IM_COL32(220,60,60,55),   COL_ERROR   },
+        { "Lowest",       "v", lowest,  IM_COL32(40,200,100,55),  COL_SUCCESS },
+    };
+
+    float availW = ImGui::GetContentRegionAvail().x;
+    float cardW = (availW - 12.0f) * 0.5f;
+    float cardH = 62.0f;
+
+    for (int ci = 0; ci < 4; ci++) {
+        if (ci == 2) { /* second row - no SameLine */ }
+        else if (ci == 1 || ci == 3) {} // SameLine called below
+
+        ImVec2 cp = ImGui::GetCursorScreenPos();
+
+        // Card background
+        dl->AddRectFilled(cp, ImVec2(cp.x + cardW, cp.y + cardH),
+            IM_COL32(16, 18, 28, 255), 8.0f);
+        // Glow border
+        dl->AddRect(cp, ImVec2(cp.x + cardW, cp.y + cardH),
+            cards[ci].glowC, 8.0f, 0, 1.5f);
+        // Top accent line
+        ImU32 lineC = ImGui::ColorConvertFloat4ToU32(
+            ImVec4(cards[ci].textC.x, cards[ci].textC.y, cards[ci].textC.z, 0.7f));
+        dl->AddRectFilled(cp, ImVec2(cp.x + cardW, cp.y + 3), lineC, 8.0f);
+
+        // Label
+        dl->AddText(ImVec2(cp.x + 12, cp.y + 10),
+            IM_COL32(120, 130, 150, 255), cards[ci].label);
+
+        // Value
+        char valStr[32]; snprintf(valStr, sizeof(valStr), "$%.2f", cards[ci].val);
+        ImGui::SetWindowFontScale(1.18f);
+        ImVec2 vs = ImGui::CalcTextSize(valStr);
+        dl->AddText(ImVec2(cp.x + cardW - vs.x - 10, cp.y + cardH - vs.y - 10),
+            ImGui::ColorConvertFloat4ToU32(cards[ci].textC), valStr);
+        ImGui::SetWindowFontScale(1.0f);
+
+        // Advance cursor
+        ImGui::Dummy(ImVec2(cardW, cardH));
+        if (ci == 0 || ci == 2) { ImGui::SameLine(0, 12); }
+    }
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "  %d records", (int)state.expenses.size());
+    ImGui::Spacing();
+
+    // ── Category breakdown with custom bars ──────────────────────────────────
+    sectionHeader("By Category");
+    double catTot[CAT_COUNT] = {};
+    categoryTotals(state.expenses, catTot);
+    double grandTotal = total > 0.0 ? total : 1.0;
+    float  barW = ImGui::GetContentRegionAvail().x - 130.0f;
+
+    for (int i = 0; i < CAT_COUNT; i++) {
+        if (catTot[i] < 0.001) continue;
+        float frac = (float)(catTot[i] / grandTotal);
+        int   cnt = recursiveCountByCategory(
+            state.expenses, (int)state.expenses.size() - 1, (Category)i);
+
+        ImVec2 rowP = ImGui::GetCursorScreenPos();
+
+        // Dot
+        dl->AddCircleFilled(ImVec2(rowP.x + 6, rowP.y + 9), 5.0f,
+            ImGui::ColorConvertFloat4ToU32(CAT_COLS[i]), 12);
+
+        // Name
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+        ImGui::TextColored(CAT_COLS[i], "%-13s", CAT_NAMES[i]);
+        ImGui::SameLine(0, 6);
+
+        // Custom bar
+        ImVec2 barP = ImGui::GetCursorScreenPos();
+        float  bh = 14.0f;
+        // Track
+        dl->AddRectFilled(barP, ImVec2(barP.x + barW, barP.y + bh),
+            IM_COL32(20, 22, 32, 220), 3.0f);
+        // Fill with gradient
+        ImU32 fillL = ImGui::ColorConvertFloat4ToU32(CAT_COLS[i]);
+        ImU32 fillR = IM_COL32(
+            (int)(CAT_COLS[i].x * 180), (int)(CAT_COLS[i].y * 180),
+            (int)(CAT_COLS[i].z * 180), 200);
+        dl->AddRectFilledMultiColor(barP,
+            ImVec2(barP.x + barW * frac, barP.y + bh), fillL, fillR, fillR, fillL);
+
+        // Label
+        char lbl[32]; snprintf(lbl, sizeof(lbl), "$%.0f (%d)", catTot[i], cnt);
+        dl->AddText(ImVec2(barP.x + barW + 6, barP.y),
+            IM_COL32(160, 170, 190, 255), lbl);
+
+        ImGui::Dummy(ImVec2(barW + 70, bh + 4));
+    }
+
+    // ── Monthly bars ─────────────────────────────────────────────────────────
+    ImGui::Spacing();
+    sectionHeader("Monthly Breakdown");
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+    ImGui::SetNextItemWidth(90);
+    ImGui::InputInt("Year##sy", &state.statsYear, 1, 10);
+    ImGui::PopStyleColor();
+    ImGui::Spacing();
+
+    double mTot[13] = {};
+    for (int m = 1; m <= 12; m++)
+        mTot[m] = recursiveMonthlyTotal(
+            state.expenses, (int)state.expenses.size() - 1, m, state.statsYear);
+    double mMax = 0.0;
+    for (int m = 1; m <= 12; m++) if (mTot[m] > mMax) mMax = mTot[m];
+
+    bool any = false;
+    float mBarW = ImGui::GetContentRegionAvail().x - 110.0f;
+    for (int m = 1; m <= 12; m++) {
+        if (mTot[m] < 0.001) continue;
+        any = true;
+        float frac = (mMax > 0.0) ? (float)(mTot[m] / mMax) : 0.0f;
+
+        ImGui::TextColored(COL_ACCENT, "%-4s", MONTHS[m]);
+        ImGui::SameLine(0, 6);
+
+        ImVec2 bp = ImGui::GetCursorScreenPos();
+        float  bh = 14.0f;
+        dl->AddRectFilled(bp, ImVec2(bp.x + mBarW, bp.y + bh), IM_COL32(20, 22, 32, 220), 3.0f);
+        dl->AddRectFilledMultiColor(bp, ImVec2(bp.x + mBarW * frac, bp.y + bh),
+            IM_COL32(50, 120, 255, 200), IM_COL32(40, 200, 180, 160),
+            IM_COL32(40, 200, 180, 160), IM_COL32(50, 120, 255, 200));
+
+        char lbl[32]; snprintf(lbl, sizeof(lbl), "$%.0f", mTot[m]);
+        dl->AddText(ImVec2(bp.x + mBarW + 6, bp.y), IM_COL32(140, 160, 200, 255), lbl);
+        ImGui::Dummy(ImVec2(mBarW + 50, bh + 4));
+    }
+    if (!any) ImGui::TextColored(COL_MUTED, "No expenses in %d.", state.statsYear);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderBudgetPanel
+// ────────────────────────────────────────────────────────────────────────────
+void renderBudgetPanel(AppState& state)
+{
+    sectionHeader("Monthly Budget");
+
+    ImGui::TextColored(COL_MUTED,
+        "Only expenses marked as Done count toward budget.");
+    ImGui::Spacing();
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+    int bm = state.budgetMonth - 1;
+    ImGui::SetNextItemWidth(115);
+    ImGui::Combo("##bm", &bm, MONTHS + 1, 12);
+    state.budgetMonth = bm + 1;
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(88);
+    ImGui::InputInt("##by", &state.budgetYear, 1, 10);
+    ImGui::PopStyleColor();
+
+    double used = getBudgetUsed(state.allExpenses, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    double limit = getBudget(state.budgets, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+
+    ImGui::Spacing();
+
+    if (limit > 0.0) {
+        float frac = (float)(used / limit);
+        if (frac > 1.0f) frac = 1.0f;
+
+        bool over = (used >= limit);
+        bool close = (!over && used >= limit * 0.9);
+        ImVec4 barC = over ? COL_ERROR : close ? COL_WARNING : COL_SUCCESS;
+
+        // Animated glow on the bar when over budget
+        if (over) {
+            float gp = pulse(2.5f, 0.5f);
+            barC = lerpColor(COL_ERROR, ImVec4(1, 0.7f, 0.7f, 1), gp);
+        }
+
+        ImGui::Text("Spent (Done): $%.2f  /  Limit: $%.2f  (%.1f%%)",
+            used, limit, used / limit * 100.0);
+        ImGui::Spacing();
+
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, barC);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.14f, 0.15f, 0.20f, 1.0f));
+        ImGui::ProgressBar(frac, ImVec2(-1, 24));
+        ImGui::PopStyleColor(2);
+
+        ImGui::Spacing();
+        if (over)
+            ImGui::TextColored(COL_ERROR,
+                "!! Budget exceeded by $%.2f !!", used - limit);
+        else if (close)
+            ImGui::TextColored(COL_WARNING,
+                "! %.1f%% used - $%.2f remaining",
+                used / limit * 100.0, limit - used);
+        else
+            ImGui::TextColored(COL_SUCCESS,
+                "%.1f%% used - $%.2f remaining",
+                used / limit * 100.0, limit - used);
+    }
+    else {
+        ImGui::TextColored(COL_MUTED, "No budget set for %s %d.",
+            MONTHS[state.budgetMonth], state.budgetYear);
+    }
+
+    ImGui::Spacing();
+    accentLine();
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Set new limit ($):");
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputFloat("##bl", &state.budgetLimit, 1.0f, 10.0f, "%.2f");
+    ImGui::PopStyleColor();
+
+    ImGui::Spacing();
+    pushBtnStyle(COL_BTN_PRIMARY);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+    if (ImGui::Button("  Set Budget  ", ImVec2(-1, 34))) {
+        bool ok = setBudget(state.budgets, state.loggedInUser,
+            state.budgetMonth, state.budgetYear,
+            (double)state.budgetLimit);
+        if (ok) {
+            state.notif90Sent = false;
+            state.notif100Sent = false;
+            checkBudgetNotifications(state);
+        }
+        setStatus(state, ok ? "Budget saved." : "Error - limit must be > 0.", !ok);
+    }
+    ImGui::PopStyleVar();
+    popBtnStyle();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderNotifCenter
+// ────────────────────────────────────────────────────────────────────────────
+void renderNotifCenter(AppState& state)
+{
+    if (!state.showNotifCenter) return;
+
+    ImGui::SetNextWindowSize(ImVec2(400, 320), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_PANEL);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.25f, 0.45f, 0.80f, 0.40f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::Begin("Notification Center", &state.showNotifCenter,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::PopStyleVar();
+
+    pushBtnStyle(COL_BTN_NEUTRAL);
+    if (ImGui::SmallButton(" Mark all read "))
+        for (auto& n : state.notifications) n.read = true;
+    ImGui::SameLine();
+    pushBtnStyle(COL_BTN_DANGER);
+    if (ImGui::SmallButton(" Clear all "))
+        state.notifications.clear();
+    popBtnStyle(); popBtnStyle();  // two popBtnStyle for two pushBtnStyle
+
+    accentLine();
+
+    if (state.notifications.empty()) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_MUTED, "  No notifications.");
+    }
