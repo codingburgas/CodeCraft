@@ -10,10 +10,10 @@
  */
 #include "../include/presentation.h"
 #include "../include/logic.h"
-#include "../imgui/imgui.h"
-#include "../imgui/imgui_impl_glfw.h"
-#include "../imgui/imgui_impl_opengl3.h"
-#include "../imgui/glfw3.h"
+#include "../assets/imgui.h"
+#include "../assets/imgui_impl_glfw.h"
+#include "../assets/imgui_impl_opengl3.h"
+#include "../assets/glfw3.h"
 #include <cstring>
 #include <cstdio>
 #include <string>
@@ -1497,4 +1497,415 @@ void renderBudgetPanel(AppState& state)
     }
     ImGui::PopStyleVar(2);
     popBtnStyle();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderNotifCenter
+// ────────────────────────────────────────────────────────────────────────────
+void renderNotifCenter(AppState& state)
+{
+    if (!state.showNotifCenter) return;
+
+    ImGui::SetNextWindowSize(ImVec2(400, 320), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_PANEL);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.25f, 0.45f, 0.80f, 0.40f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::Begin("Notification Center", &state.showNotifCenter,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::PopStyleVar();
+
+    pushBtnStyle(COL_BTN_NEUTRAL);
+    if (ImGui::SmallButton(" Mark all read "))
+        for (auto& n : state.notifications) n.read = true;
+    ImGui::SameLine();
+    pushBtnStyle(COL_BTN_DANGER);
+    if (ImGui::SmallButton(" Clear all "))
+        state.notifications.clear();
+    popBtnStyle(); popBtnStyle();  // two popBtnStyle for two pushBtnStyle
+
+    accentLine();
+
+    if (state.notifications.empty()) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_MUTED, "  No notifications.");
+    }
+    else {
+        for (int i = (int)state.notifications.size() - 1; i >= 0; i--) {
+            auto& n = state.notifications[i];
+            ImGui::PushID(i);
+            ImVec2 cp = ImGui::GetCursorScreenPos();
+            float  w = ImGui::GetContentRegionAvail().x;
+            if (!n.read) {
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                    cp, ImVec2(cp.x + w, cp.y + ImGui::GetTextLineHeightWithSpacing() + 2),
+                    IM_COL32(60, 45, 10, 60), 3.0f);
+            }
+            ImGui::TextColored(n.read ? COL_MUTED : COL_WARNING,
+                n.read ? "   %s" : "  * %s", n.message.c_str());
+            if (!n.read) {
+                ImGui::SameLine(w - 42);
+                pushBtnStyle(COL_BTN_NEUTRAL);
+                if (ImGui::SmallButton("Read")) n.read = true;
+                popBtnStyle();
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor(2);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderSettingsWindow
+// ────────────────────────────────────────────────────────────────────────────
+void renderSettingsWindow(AppState& state)
+{
+    if (!state.showSettings) return;
+
+    ImGui::SetNextWindowSize(ImVec2(370, 295), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_PANEL);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.25f, 0.45f, 0.80f, 0.40f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::Begin("Settings", &state.showSettings,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::PopStyleVar();
+
+    ImGui::TextColored(COL_ACCENT2, "Account:  %s", state.loggedInUser.c_str());
+    ImGui::Spacing();
+    sectionHeader("Change Password");
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+    ImGui::TextColored(COL_MUTED, "Current password:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp1", state.cpOldPass, sizeof(state.cpOldPass),
+        ImGuiInputTextFlags_Password);
+    ImGui::TextColored(COL_MUTED, "New password (min 6 chars):");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp2", state.cpNewPass, sizeof(state.cpNewPass),
+        ImGuiInputTextFlags_Password);
+    ImGui::TextColored(COL_MUTED, "Confirm new password:");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##cp3", state.cpNewPass2, sizeof(state.cpNewPass2),
+        ImGuiInputTextFlags_Password);
+    ImGui::PopStyleColor();
+
+    ImGui::Spacing();
+    if (state.cpMsg[0] != '\0')
+        ImGui::TextColored(state.cpError ? COL_ERROR : COL_SUCCESS,
+            "  %s", state.cpMsg);
+    ImGui::Spacing();
+
+    pushBtnStyle(COL_BTN_PRIMARY);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+    if (ImGui::Button("  Change Password  ", ImVec2(-1, 32))) {
+        memset(state.cpMsg, 0, sizeof(state.cpMsg));
+        if (string(state.cpNewPass) != string(state.cpNewPass2)) {
+            snprintf(state.cpMsg, sizeof(state.cpMsg), "Passwords do not match.");
+            state.cpError = true;
+        }
+        else if (changePassword(state.users, state.loggedInUser,
+            state.cpOldPass, state.cpNewPass)) {
+            snprintf(state.cpMsg, sizeof(state.cpMsg),
+                "Password changed successfully.");
+            state.cpError = false;
+            memset(state.cpOldPass, 0, sizeof(state.cpOldPass));
+            memset(state.cpNewPass, 0, sizeof(state.cpNewPass));
+            memset(state.cpNewPass2, 0, sizeof(state.cpNewPass2));
+            addNotification(state, "Your password was changed successfully.");
+        }
+        else {
+            snprintf(state.cpMsg, sizeof(state.cpMsg),
+                "Error - check current password.");
+            state.cpError = true;
+        }
+    }
+    ImGui::PopStyleVar();
+    popBtnStyle();
+
+    ImGui::End();
+    ImGui::PopStyleColor(2);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderStatusBar
+// ────────────────────────────────────────────────────────────────────────────
+void renderStatusBar(const AppState& state)
+{
+    if (state.statusMsg[0] == '\0') return;
+
+    // Thin animated status bar at the bottom
+    ImVec2 cp = ImGui::GetCursorScreenPos();
+    float  w = ImGui::GetContentRegionAvail().x;
+    ImU32 bgC = state.statusError
+        ? IM_COL32(80, 20, 20, 200)
+        : IM_COL32(15, 55, 25, 200);
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        cp, ImVec2(cp.x + w, cp.y + 22), bgC, 0.0f);
+
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 8);
+    ImGui::TextColored(state.statusError ? COL_ERROR : COL_SUCCESS,
+        "%s", state.statusMsg);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderDashboard
+// ────────────────────────────────────────────────────────────────────────────
+void renderDashboard(AppState& state)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    float W = io.DisplaySize.x, H = io.DisplaySize.y;
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(W, H));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.07f, 0.08f, 0.12f, 1.0f));
+    ImGui::Begin("##dash", nullptr,
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::PopStyleVar(2);
+
+    // ── Full window background gradient via DrawList ─────────────────────────
+    {
+        ImDrawList* bdl = ImGui::GetWindowDrawList();
+        bdl->AddRectFilledMultiColor(
+            ImVec2(0, 0), ImVec2(W, H),
+            IM_COL32(8, 10, 18, 255), IM_COL32(10, 12, 22, 255),
+            IM_COL32(12, 10, 20, 255), IM_COL32(8, 10, 18, 255));
+        // Subtle top-left radial glow
+        bdl->AddCircleFilled(ImVec2(0, 0), 400,
+            IM_COL32(20, 40, 100, 18), 40);
+        // Bottom-right counter glow
+        bdl->AddCircleFilled(ImVec2(W, H), 300,
+            IM_COL32(10, 60, 40, 14), 40);
+    }
+
+    renderHeader(state);
+    ImGui::Spacing();
+
+    float avail = H - 68.0f; // height below header
+    float leftW = W * 0.595f;
+    float rightW = W - leftW - 4.0f;
+
+    // ── LEFT: expense table ───────────────────────────────────────────────────
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.09f, 0.13f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
+    ImGui::BeginChild("##left", ImVec2(leftW, avail - 26), false);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+    renderExpenseTable(state);
+    ImGui::EndChild();
+
+    ImGui::SameLine(0, 0);
+
+    // Vertical separator line
+    {
+        ImVec2 sp = ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+            sp, ImVec2(sp.x + 2, sp.y + avail - 26),
+            IM_COL32(0, 0, 0, 0),
+            IM_COL32(0, 0, 0, 0),
+            IM_COL32(50, 100, 220, 80),
+            IM_COL32(50, 100, 220, 80));
+        ImGui::Dummy(ImVec2(2, 0));
+        ImGui::SameLine(0, 0);
+    }
+
+    // ── RIGHT: sidebar with gradient bg + tabs ────────────────────────────────
+    {
+        ImVec2 rp = ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+            rp, ImVec2(rp.x + rightW, rp.y + avail - 26),
+            IM_COL32(10, 13, 22, 255), IM_COL32(8, 10, 18, 255),
+            IM_COL32(8, 10, 18, 255), IM_COL32(10, 13, 22, 255));
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0.10f, 0.12f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(0.16f, 0.30f, 0.65f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(0.13f, 0.36f, 0.82f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0.10f, 0.24f, 0.52f, 1.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 8));
+    ImGui::BeginChild("##right", ImVec2(0, avail - 26), false);
+
+    if (ImGui::BeginTabBar("##tabs"))
+    {
+        ImGuiTabItemFlags editFlags = 0;
+        if (state.switchToEdit && state.editIdx >= 0) {
+            editFlags = ImGuiTabItemFlags_SetSelected;
+            state.switchToEdit = false;
+        }
+
+        if (ImGui::BeginTabItem("  Add  ")) {
+            if (state.editIdx >= 0) {
+                state.editIdx = -1; state.switchToEdit = false;
+                memset(state.formDesc, 0, sizeof(state.formDesc));
+                state.formAmount = 0.0f; state.formCategory = 0;
+                state.formDay = 1; state.formMonth = 1; state.formYear = 2024;
+            }
+            ImGui::Spacing();
+            renderFormPanel(state);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("  Edit  ", nullptr, editFlags)) {
+            if (state.editIdx >= 0) {
+                ImGui::Spacing();
+                renderFormPanel(state);
+            }
+            else {
+                ImGui::Spacing();
+                ImGui::TextColored(COL_MUTED, "  Click Edit on a row in the table.");
+            }
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("  Search  ")) {
+            ImGui::Spacing(); renderSearchPanel(state); ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("  Stats  ")) {
+            ImGui::Spacing(); renderStatsPanel(state); ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("  Budget  ")) {
+            ImGui::Spacing(); renderBudgetPanel(state); ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(5);
+
+    renderStatusBar(state);
+    ImGui::End();
+    ImGui::PopStyleColor(); // WindowBg
+
+    renderSettingsWindow(state);
+    renderNotifCenter(state);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderApp
+// ────────────────────────────────────────────────────────────────────────────
+void renderApp(AppState& state)
+{
+    switch (state.currentScreen) {
+    case SCREEN_LOGIN:     renderLoginScreen(state);    break;
+    case SCREEN_REGISTER:  renderRegisterScreen(state); break;
+    case SCREEN_DASHBOARD: renderDashboard(state);      break;
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  mainMenu  (GLFW / OpenGL bootstrapper)
+// ────────────────────────────────────────────────────────────────────────────
+void mainMenu()
+{
+    if (!glfwInit()) return;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    GLFWwindow* window = glfwCreateWindow(1280, 720,
+        "Spendora", nullptr, nullptr);
+    if (!window) { glfwTerminate(); return; }
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);  // vsync
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
+
+    // ── Style ──────────────────────────────────────────────────────────────
+    ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    // Shape — more rounded for modern feel
+    style.WindowRounding = 10.0f;
+    style.ChildRounding = 7.0f;
+    style.FrameRounding = 6.0f;
+    style.TabRounding = 6.0f;
+    style.ScrollbarRounding = 5.0f;
+    style.GrabRounding = 5.0f;
+    style.PopupRounding = 8.0f;
+
+    // Spacing — slightly more breathing room
+    style.FramePadding = ImVec2(10, 6);
+    style.ItemSpacing = ImVec2(10, 7);
+    style.ItemInnerSpacing = ImVec2(7, 5);
+    style.CellPadding = ImVec2(8, 5);
+    style.ScrollbarSize = 9.0f;
+    style.WindowBorderSize = 1.0f;
+    style.FrameBorderSize = 0.0f;
+    style.TabBorderSize = 0.0f;
+
+    // Colours — deep dark navy base with vivid blue accents
+    ImVec4* c = style.Colors;
+    c[ImGuiCol_WindowBg] = ImVec4(0.07f, 0.08f, 0.12f, 1.0f);
+    c[ImGuiCol_ChildBg] = ImVec4(0.06f, 0.07f, 0.11f, 1.0f);
+    c[ImGuiCol_PopupBg] = ImVec4(0.09f, 0.10f, 0.16f, 0.98f);
+    c[ImGuiCol_Border] = ImVec4(0.18f, 0.20f, 0.30f, 1.0f);
+    c[ImGuiCol_FrameBg] = ImVec4(0.11f, 0.13f, 0.20f, 1.0f);
+    c[ImGuiCol_FrameBgHovered] = ImVec4(0.15f, 0.18f, 0.28f, 1.0f);
+    c[ImGuiCol_FrameBgActive] = ImVec4(0.18f, 0.22f, 0.36f, 1.0f);
+    c[ImGuiCol_TitleBg] = ImVec4(0.07f, 0.08f, 0.13f, 1.0f);
+    c[ImGuiCol_TitleBgActive] = ImVec4(0.09f, 0.15f, 0.32f, 1.0f);
+    c[ImGuiCol_ScrollbarBg] = ImVec4(0.05f, 0.06f, 0.10f, 1.0f);
+    c[ImGuiCol_ScrollbarGrab] = ImVec4(0.18f, 0.35f, 0.70f, 0.75f);
+    c[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.25f, 0.48f, 0.88f, 0.85f);
+    c[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.30f, 0.55f, 1.00f, 1.0f);
+    c[ImGuiCol_CheckMark] = ImVec4(0.30f, 0.70f, 1.00f, 1.0f);
+    c[ImGuiCol_SliderGrab] = ImVec4(0.25f, 0.58f, 0.95f, 1.0f);
+    c[ImGuiCol_Button] = ImVec4(0.14f, 0.40f, 0.90f, 1.0f);
+    c[ImGuiCol_ButtonHovered] = ImVec4(0.22f, 0.52f, 1.00f, 1.0f);
+    c[ImGuiCol_ButtonActive] = ImVec4(0.10f, 0.32f, 0.80f, 1.0f);
+    c[ImGuiCol_Header] = ImVec4(0.14f, 0.34f, 0.72f, 0.65f);
+    c[ImGuiCol_HeaderHovered] = ImVec4(0.18f, 0.44f, 0.85f, 0.80f);
+    c[ImGuiCol_HeaderActive] = ImVec4(0.22f, 0.50f, 0.95f, 1.0f);
+    c[ImGuiCol_Separator] = ImVec4(0.18f, 0.20f, 0.30f, 1.0f);
+    c[ImGuiCol_Tab] = ImVec4(0.10f, 0.12f, 0.19f, 1.0f);
+    c[ImGuiCol_TabHovered] = ImVec4(0.16f, 0.32f, 0.68f, 1.0f);
+    c[ImGuiCol_TabActive] = ImVec4(0.13f, 0.38f, 0.85f, 1.0f);
+    c[ImGuiCol_TabUnfocusedActive] = ImVec4(0.10f, 0.24f, 0.55f, 1.0f);
+    c[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 0.55f, 1.00f, 0.40f);
+    c[ImGuiCol_TableHeaderBg] = ImVec4(0.12f, 0.20f, 0.42f, 1.0f);
+    c[ImGuiCol_TableRowBg] = ImVec4(0.09f, 0.10f, 0.15f, 1.0f);
+    c[ImGuiCol_TableRowBgAlt] = ImVec4(0.11f, 0.12f, 0.19f, 1.0f);
+    c[ImGuiCol_TableBorderLight] = ImVec4(0.16f, 0.18f, 0.26f, 1.0f);
+    c[ImGuiCol_TableBorderStrong] = ImVec4(0.20f, 0.36f, 0.70f, 0.60f);
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    AppState state;
+    state.allExpenses = loadAllExpenses();
+    state.users = loadAllUsers();
+    state.budgets = loadAllBudgets();
+
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        renderApp(state);
+
+        ImGui::Render();
+        int w, h;
+        glfwGetFramebufferSize(window, &w, &h);
+        glViewport(0, 0, w, h);
+        glClearColor(0.05f, 0.06f, 0.10f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }
