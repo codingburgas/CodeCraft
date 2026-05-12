@@ -332,3 +332,553 @@ void renderLoginScreen(AppState& state)
     ImGui::End();
     ImGui::PopStyleColor(2);
 }
+// ────────────────────────────────────────────────────────────────────────────
+//  renderRegisterScreen
+// ────────────────────────────────────────────────────────────────────────────
+void renderRegisterScreen(AppState& state)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    float W = io.DisplaySize.x, H = io.DisplaySize.y;
+    float t = (float)ImGui::GetTime();
+
+    // Same rich animated background as login
+    ImDrawList* bg = ImGui::GetBackgroundDrawList();
+    bg->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(W, H),
+        IM_COL32(6, 8, 18, 255), IM_COL32(8, 12, 28, 255),
+        IM_COL32(10, 8, 20, 255), IM_COL32(6, 8, 18, 255));
+    for (int i = 0; i < 4; i++) {
+        float r = 180.0f + i * 80.0f + 18.0f * sinf(t * 0.4f + i);
+        bg->AddCircle(ImVec2(W * 0.5f, H * 0.5f), r,
+            IM_COL32(40, 90, 200, (int)(20 - i * 3 + 5 * sinf(t * 0.5f + i))), 64, 1.0f);
+    }
+    for (int i = 0; i < 14; i++) {
+        float px = W * (0.05f + 0.07f * i + 0.01f * sinf(t * 0.3f + i * 1.3f));
+        float py = H * (0.08f + 0.06f * i + 0.012f * cosf(t * 0.25f + i * 0.9f));
+        bg->AddCircleFilled(ImVec2(px, py), 1.5f + sinf(t + i),
+            IM_COL32(80, 140, 255, (int)(25 + 20 * sinf(t * 0.6f + i))));
+    }
+    // Green tint streak for "create" feel
+    bg->AddLine(ImVec2(W * 0.7f, 0), ImVec2(W * 0.7f + 200, H),
+        IM_COL32(20, 120, 80, (int)(12 + 6 * sinf(t * 0.2f))), 50.0f);
+
+    float CW = 430.0f, CH = 430.0f;
+    float cx = (W - CW) * 0.5f, cy = (H - CH) * 0.5f;
+
+    ImGui::SetNextWindowPos(ImVec2(cx, cy), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(CW, CH), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.09f, 0.10f, 0.15f, 0.97f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.20f, 0.55f, 0.35f, 0.45f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(32, 22));
+    ImGui::Begin("##register", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
+    ImGui::PopStyleVar(2);
+
+    // Green top accent bar
+    {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImVec2 wp = ImGui::GetWindowPos();
+        float ap = pulse(1.3f, 0.5f);
+        ImU32 aL = IM_COL32((int)(20 * ap), (int)(160 * ap), (int)(80 * ap), 220);
+        ImU32 aR = IM_COL32((int)(30 * ap), (int)(100 * ap), (int)(200 * ap), 180);
+        dl->AddRectFilledMultiColor(wp, ImVec2(wp.x + CW, wp.y + 4), aL, aR, aR, aL);
+        dl->AddCircleFilled(ImVec2(wp.x + 1, wp.y + 1), 6, IM_COL32(30, 200, 100, 80));
+        dl->AddCircleFilled(ImVec2(wp.x + CW - 1, wp.y + 1), 6, IM_COL32(40, 130, 220, 60));
+    }
+
+    // Title
+    ImGui::Spacing();
+    const char* title = "Create Account";
+    float tw = ImGui::CalcTextSize(title).x;
+    ImGui::SetCursorPosX((CW - tw) * 0.5f);
+    ImGui::SetWindowFontScale(1.40f);
+    ImGui::PushStyleColor(ImGuiCol_Text, COL_SUCCESS);
+    ImGui::Text("%s", title);
+    ImGui::PopStyleColor();
+    ImGui::SetWindowFontScale(1.0f);
+    const char* sub = "Join Spendora today";
+    float sw2 = ImGui::CalcTextSize(sub).x;
+    ImGui::SetCursorPosX((CW - sw2) * 0.5f);
+    ImGui::TextColored(COL_MUTED, "%s", sub);
+
+    ImGui::Spacing();
+    accentLine();
+    ImGui::Spacing();
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.13f, 0.15f, 0.22f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.17f, 0.20f, 0.30f, 1.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 7));
+
+    ImGui::TextColored(COL_MUTED, "Username  (3-20 chars, letters/numbers/_)");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##ru", state.regUser, sizeof(state.regUser));
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Email");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##re", state.regEmail, sizeof(state.regEmail));
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Password  (min 6 characters)");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##rp", state.regPass, sizeof(state.regPass),
+        ImGuiInputTextFlags_Password);
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Confirm Password");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##rp2", state.regPass2, sizeof(state.regPass2),
+        ImGuiInputTextFlags_Password);
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(2);
+
+    ImGui::Spacing();
+    if (state.regError[0] != '\0') ImGui::TextColored(COL_ERROR, "  %s", state.regError);
+    if (state.regSuccess[0] != '\0') ImGui::TextColored(COL_SUCCESS, "  %s", state.regSuccess);
+    ImGui::Spacing();
+
+    pushBtnStyle(ImVec4(0.10f, 0.50f, 0.22f, 1.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 9));
+    if (ImGui::Button("Create Account", ImVec2(-1, 0))) {
+        memset(state.regError, 0, sizeof(state.regError));
+        memset(state.regSuccess, 0, sizeof(state.regSuccess));
+        if (string(state.regPass) != string(state.regPass2))
+            snprintf(state.regError, sizeof(state.regError), "Passwords do not match.");
+        else if (usernameExists(state.users, state.regUser))
+            snprintf(state.regError, sizeof(state.regError), "Username already taken.");
+        else if (registerUser(state.users, state.regUser, state.regPass, state.regEmail)) {
+            snprintf(state.regSuccess, sizeof(state.regSuccess),
+                "Account created! You can now log in.");
+            memset(state.regUser, 0, sizeof(state.regUser));
+            memset(state.regPass, 0, sizeof(state.regPass));
+            memset(state.regPass2, 0, sizeof(state.regPass2));
+            memset(state.regEmail, 0, sizeof(state.regEmail));
+        }
+        else
+            snprintf(state.regError, sizeof(state.regError),
+                "Registration failed. Check all fields.");
+    }
+    ImGui::PopStyleVar(2);
+    popBtnStyle();
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Already have an account?");
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, COL_ACCENT);
+    if (ImGui::SmallButton("Log in here")) {
+        state.currentScreen = SCREEN_LOGIN;
+        memset(state.regError, 0, sizeof(state.regError));
+        memset(state.regSuccess, 0, sizeof(state.regSuccess));
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::End();
+    ImGui::PopStyleColor(2);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderHeader
+// ────────────────────────────────────────────────────────────────────────────
+void renderHeader(AppState& state)
+{
+    const float HDR_H = 58.0f;
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::BeginChild("##hdr", ImVec2(0, HDR_H), false);
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2      wpos = ImGui::GetWindowPos();
+    float       W = ImGui::GetWindowWidth();
+
+    // ── Gradient background ──────────────────────────────────────────────────
+    ImU32 bgL = IM_COL32(14, 20, 38, 255);
+    ImU32 bgR = IM_COL32(10, 14, 24, 255);
+    dl->AddRectFilledMultiColor(wpos, ImVec2(wpos.x + W, wpos.y + HDR_H),
+        bgL, bgR, bgR, bgL);
+
+    // Animated blue glow strip at the bottom of header
+    float gp = pulse(1.5f, 0.4f);
+    ImU32 glowC = IM_COL32((int)(40 * gp), (int)(100 * gp), (int)(220 * gp), (int)(180 * gp));
+    ImU32 glowT = IM_COL32(0, 0, 0, 0);
+    dl->AddRectFilledMultiColor(
+        ImVec2(wpos.x, wpos.y + HDR_H - 3),
+        ImVec2(wpos.x + W * 0.5f, wpos.y + HDR_H),
+        glowT, glowC, glowC, glowT);
+    dl->AddRectFilledMultiColor(
+        ImVec2(wpos.x + W * 0.5f, wpos.y + HDR_H - 3),
+        ImVec2(wpos.x + W, wpos.y + HDR_H),
+        glowC, glowT, glowT, glowC);
+
+    // ── Logo / Title ─────────────────────────────────────────────────────────
+    // Draw a small coloured square logo
+    float lx = wpos.x + 14, ly = wpos.y + 14;
+    dl->AddRectFilled(ImVec2(lx, ly), ImVec2(lx + 8, ly + 8),
+        IM_COL32(80, 160, 255, 255), 2.0f);
+    dl->AddRectFilled(ImVec2(lx + 10, ly), ImVec2(lx + 18, ly + 8),
+        IM_COL32(50, 200, 130, 255), 2.0f);
+    dl->AddRectFilled(ImVec2(lx, ly + 10), ImVec2(lx + 18, ly + 18),
+        IM_COL32(60, 130, 240, 180), 2.0f);
+
+    ImGui::SetCursorPos(ImVec2(38, 16));
+    float tp = pulse(1.2f, 0.80f);
+    ImVec4 titleC = lerpColor(COL_ACCENT, COL_ACCENT2, tp);
+    ImGui::PushStyleColor(ImGuiCol_Text, titleC);
+    ImGui::SetWindowFontScale(1.30f);
+    ImGui::Text("Spendora");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::PopStyleColor();
+
+    // ── Budget warning badge ─────────────────────────────────────────────────
+    double used = getBudgetUsed(state.allExpenses, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    double limit = getBudget(state.budgets, state.loggedInUser,
+        state.budgetMonth, state.budgetYear);
+    if (limit > 0.0 && used >= limit * 0.9) {
+        bool over = (used >= limit);
+        float wp2 = pulse(3.0f, 0.55f);
+        ImU32 badgeC = over
+            ? IM_COL32((int)(220), (int)(50 + 60 * wp2), (int)(50 + 60 * wp2), 220)
+            : IM_COL32(200, 140, 0, 210);
+        // Draw pill badge
+        const char* warnTxt = over ? "!! Budget exceeded !!" : "! Near limit";
+        ImVec2 ts = ImGui::CalcTextSize(warnTxt);
+        float bx = wpos.x + 230, by = wpos.y + 18;
+        dl->AddRectFilled(ImVec2(bx - 6, by - 3), ImVec2(bx + ts.x + 6, by + ts.y + 3), badgeC, 6.0f);
+        dl->AddText(ImVec2(bx, by), IM_COL32(255, 255, 255, 255), warnTxt);
+        ImGui::Dummy(ImVec2(0, 0)); // keep layout flowing
+    }
+
+    // ── Right side: total, user, buttons ────────────────────────────────────
+    // Layout (right-to-left): Buttons ~200px | User pill ~80px | Total pill ~130px
+    // Total pill - leftmost of the right group
+    {
+        char totTxt[48];
+        snprintf(totTxt, sizeof(totTxt), "%.2f EUR", totalExpenses(state.expenses));
+        float bx = wpos.x + W - 430, by = wpos.y + 14;
+        float twTotal = ImGui::CalcTextSize("Total ").x;
+        float twNum = ImGui::CalcTextSize(totTxt).x;
+        float th = ImGui::CalcTextSize(totTxt).y;
+        dl->AddRectFilled(ImVec2(bx - 8, by - 4), ImVec2(bx + twTotal + twNum + 8, by + th + 4),
+            IM_COL32(20, 50, 110, 200), 8.0f);
+        dl->AddText(ImVec2(bx, by), IM_COL32(130, 170, 255, 255), "Total ");
+        dl->AddText(ImVec2(bx + twTotal, by), IM_COL32(100, 200, 255, 255), totTxt);
+    }
+    // User pill
+    {
+        float bx = wpos.x + W - 290, by = wpos.y + 14;
+        ImVec2 ts = ImGui::CalcTextSize(state.loggedInUser.c_str());
+        dl->AddRectFilled(ImVec2(bx - 6, by - 4), ImVec2(bx + ts.x + 8, by + ts.y + 4),
+            IM_COL32(20, 80, 40, 200), 8.0f);
+        dl->AddText(ImVec2(bx, by), IM_COL32(80, 220, 120, 255), state.loggedInUser.c_str());
+    }
+
+    // Buttons on the far right
+    ImGui::SameLine(W - 200);
+    ImGui::SetCursorPosY(15);
+
+    int unread = unreadCount(state);
+    char bellLbl[32];
+    snprintf(bellLbl, sizeof(bellLbl), unread > 0 ? "Bell(%d)##nb" : "Bell##nb", unread);
+    pushBtnStyle(unread > 0 ? COL_BTN_WARN : COL_BTN_NEUTRAL);
+    if (ImGui::SmallButton(bellLbl)) state.showNotifCenter = !state.showNotifCenter;
+    popBtnStyle();
+    ImGui::SameLine(0, 6);
+
+    pushBtnStyle(COL_BTN_NEUTRAL);
+    if (ImGui::SmallButton("Settings")) state.showSettings = !state.showSettings;
+    popBtnStyle();
+    ImGui::SameLine(0, 6);
+
+    pushBtnStyle(COL_BTN_DANGER);
+    if (ImGui::SmallButton("Logout")) {
+        state.loggedInUser = "";
+        state.currentScreen = SCREEN_LOGIN;
+        state.expenses.clear();
+        state.notifications.clear();
+        state.editIdx = -1; state.deleteIdx = -1; state.switchToEdit = false;
+        state.notif90Sent = false; state.notif100Sent = false;
+        memset(state.statusMsg, 0, sizeof(state.statusMsg));
+    }
+    popBtnStyle();
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderDeleteModal
+// ────────────────────────────────────────────────────────────────────────────
+void renderDeleteModal(AppState& state)
+{
+    // The popup ID must match exactly what was passed to OpenPopup
+    if (!ImGui::BeginPopupModal("Confirm Delete##modal", nullptr,
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+        return;
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_WARNING, "  Delete this expense?");
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "  This action cannot be undone.");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    pushBtnStyle(COL_BTN_DANGER);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+    if (ImGui::Button("  Yes, delete  ", ImVec2(130, 32))) {
+        if (state.deleteIdx >= 0 && state.deleteIdx < (int)state.expenses.size()) {
+            int targetId = state.expenses[state.deleteIdx].id;
+            int globalIdx = -1;
+            for (int k = 0; k < (int)state.allExpenses.size(); k++)
+                if (state.allExpenses[k].id == targetId) { globalIdx = k; break; }
+            if (globalIdx >= 0) {
+                removeExpense(state.allExpenses, globalIdx);
+                refreshExpenses(state);
+                setStatus(state, "Expense deleted.");
+            }
+            state.deleteIdx = -1;
+        }
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleVar();
+    popBtnStyle();
+
+    ImGui::SameLine(0, 12);
+
+    pushBtnStyle(COL_BTN_NEUTRAL);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+    if (ImGui::Button("  Cancel  ", ImVec2(100, 32))) {
+        state.deleteIdx = -1;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleVar();
+    popBtnStyle();
+
+    ImGui::Spacing();
+    ImGui::EndPopup();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  renderExpenseTable
+// ────────────────────────────────────────────────────────────────────────────
+void renderExpenseTable(AppState& state)
+{
+    // ── Filter/sort bar ─────────────────────────────────────────────────────
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
+
+    ImGui::TextColored(COL_MUTED, "Sort:");
+    ImGui::SameLine();
+    ImGui::RadioButton("Amount", &state.sortMode, 0); ImGui::SameLine();
+    ImGui::RadioButton("Date", &state.sortMode, 1); ImGui::SameLine();
+    ImGui::RadioButton("Category", &state.sortMode, 2);
+
+    ImGui::SameLine(0, 14); ImGui::TextColored(COL_MUTED, "Month:"); ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::Combo("##fm", &state.filterMonth, MONTHS, 13);
+    if (state.filterMonth > 0) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(72);
+        ImGui::InputInt("##fy", &state.filterYear, 1, 10);
+    }
+
+    const char* catCombo[CAT_COUNT + 1];
+    catCombo[0] = "All";
+    for (int i = 0; i < CAT_COUNT; i++) catCombo[i + 1] = CAT_NAMES[i];
+    int catFilter = state.filterCat + 1;
+    ImGui::SameLine(0, 14); ImGui::TextColored(COL_MUTED, "Category:"); ImGui::SameLine();
+    ImGui::SetNextItemWidth(110);
+    ImGui::Combo("##fc", &catFilter, catCombo, CAT_COUNT + 1);
+    state.filterCat = catFilter - 1;
+
+    ImGui::SameLine(0, 14);
+    ImGui::Checkbox("Amount range", &state.useAmountFilter);
+    if (state.useAmountFilter) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(65);
+        ImGui::InputFloat("##fmn", &state.filterMinAmt, 0, 0, "%.0f");
+        ImGui::SameLine(); ImGui::TextColored(COL_MUTED, "-"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(65);
+        ImGui::InputFloat("##fmx", &state.filterMaxAmt, 0, 0, "%.0f");
+    }
+
+    ImGui::PopStyleColor();
+
+    // ── Build display list ───────────────────────────────────────────────────
+    vector<Expense> disp = state.expenses;
+    if (state.filterMonth > 0)
+        disp = filterByMonth(disp, state.filterMonth, state.filterYear);
+    if (state.filterCat >= 0)
+        disp = filterByCategory(disp, (Category)state.filterCat);
+    if (state.useAmountFilter && state.filterMaxAmt > state.filterMinAmt)
+        disp = filterByRange(disp, state.filterMinAmt, state.filterMaxAmt);
+
+    if (state.sortMode == 0) bubbleSortByAmount(disp);
+    else if (state.sortMode == 1 && !disp.empty())
+        quickSortByDate(disp, 0, (int)disp.size() - 1);
+    else if (state.sortMode == 2) bubbleSortByCategory(disp);
+
+    // ── Record count badge ───────────────────────────────────────────────────
+    ImGui::Spacing();
+    {
+        ImVec2 cp = ImGui::GetCursorScreenPos();
+        char cnt[32]; snprintf(cnt, sizeof(cnt), " %d record(s)", (int)disp.size());
+        ImVec2 ts = ImGui::CalcTextSize(cnt);
+        ImGui::GetWindowDrawList()->AddRectFilled(
+            cp, ImVec2(cp.x + ts.x + 8, cp.y + ts.y + 4),
+            IM_COL32(30, 60, 120, 180), 4.0f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2);
+        ImGui::TextColored(COL_ACCENT2, "%s", cnt);
+    }
+    ImGui::Spacing();
+
+    // ── Table ────────────────────────────────────────────────────────────────
+    const ImGuiTableFlags tflags =
+        ImGuiTableFlags_Borders |
+        ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_ScrollY |
+        ImGuiTableFlags_SizingStretchProp;
+
+    // Subtle alternating row tint
+    ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.10f, 0.11f, 0.15f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.12f, 0.13f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TableBorderLight, COL_SEPARATOR);
+    ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.22f, 0.40f, 0.75f, 0.5f));
+
+    // FIX: declared BEFORE BeginTable so it remains in scope after EndTable
+    int pendingDeleteUserIdx = -1;
+
+    float tableH = ImGui::GetContentRegionAvail().y - 28.0f;
+    if (ImGui::BeginTable("##tbl", 8, tflags, ImVec2(0, tableH)))
+    {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 34);
+        ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Amount(EUR)", ImGuiTableColumnFlags_WidthFixed, 82);
+        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, 112);
+        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 88);
+        ImGui::TableSetupColumn("Done", ImGuiTableColumnFlags_WidthFixed, 46);
+        ImGui::TableSetupColumn("Edit", ImGuiTableColumnFlags_WidthFixed, 38);
+        ImGui::TableSetupColumn("Del", ImGuiTableColumnFlags_WidthFixed, 34);
+
+        // Styled header row
+        ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.14f, 0.22f, 0.40f, 1.0f));
+        ImGui::TableHeadersRow();
+        ImGui::PopStyleColor();
+
+        for (int i = 0; i < (int)disp.size(); i++)
+        {
+            const Expense& e = disp[i];
+            int userIdx = -1;
+            for (int k = 0; k < (int)state.expenses.size(); k++)
+                if (state.expenses[k].id == e.id) { userIdx = k; break; }
+
+            ImGui::TableNextRow(0, 22.0f);
+
+            ImVec4 textCol = e.completed ? COL_DONE : ImVec4(0.92f, 0.93f, 0.95f, 1.0f);
+            ImVec4 catC = e.completed ? COL_DONE : CAT_COLS[e.category];
+
+            // Col 0: ID with left coloured category bar drawn via DrawList
+            ImGui::TableSetColumnIndex(0);
+            {
+                ImVec2 rmin = ImGui::GetCursorScreenPos();
+                // 3px category colour bar on the left of the row
+                ImGui::GetWindowDrawList()->AddRectFilled(
+                    ImVec2(rmin.x - 6, rmin.y),
+                    ImVec2(rmin.x - 3, rmin.y + 22),
+                    ImGui::ColorConvertFloat4ToU32(catC), 1.0f);
+            }
+            ImGui::TextColored(COL_MUTED, "%d", e.id);
+
+            // Col 1: Description (with strikethrough if done)
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextColored(textCol, "%s", e.description.c_str());
+            if (e.completed) {
+                ImVec2 tmin = ImGui::GetItemRectMin();
+                ImVec2 tmax = ImGui::GetItemRectMax();
+                ImGui::GetWindowDrawList()->AddLine(
+                    ImVec2(tmin.x, (tmin.y + tmax.y) * 0.5f),
+                    ImVec2(tmax.x, (tmin.y + tmax.y) * 0.5f),
+                    ImGui::ColorConvertFloat4ToU32(COL_DONE), 1.2f);
+            }
+
+            // Col 2: Amount — green tint for normal, muted for done
+            ImGui::TableSetColumnIndex(2);
+            ImGui::TextColored(e.completed ? COL_DONE : COL_ACCENT2, "%.2f", e.amount);
+
+            // Col 3: Category — dot + name
+            ImGui::TableSetColumnIndex(3);
+            {
+                ImVec2 cp = ImGui::GetCursorScreenPos();
+                ImGui::GetWindowDrawList()->AddCircleFilled(
+                    ImVec2(cp.x + 5, cp.y + 9), 4.5f,
+                    ImGui::ColorConvertFloat4ToU32(catC), 12);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 13);
+                ImGui::TextColored(catC, "%s", CAT_NAMES[e.category]);
+            }
+
+            // Col 4: Date
+            ImGui::TableSetColumnIndex(4);
+            ImGui::TextColored(ImVec4(0.55f, 0.60f, 0.70f, 1.0f),
+                "%02d/%02d/%04d", e.month, e.day, e.year);
+
+            // ── Done toggle ────────────────────────────────────────────────
+            ImGui::TableSetColumnIndex(5);
+            ImGui::PushID(e.id * 10 + 3);
+            pushBtnStyle(e.completed
+                ? ImVec4(0.18f, 0.55f, 0.20f, 0.9f)
+                : ImVec4(0.25f, 0.27f, 0.33f, 0.9f));
+            if (ImGui::SmallButton(e.completed ? "Undo" : "Done") && userIdx >= 0) {
+                int tid = state.expenses[userIdx].id;
+                for (int k = 0; k < (int)state.allExpenses.size(); k++) {
+                    if (state.allExpenses[k].id == tid) {
+                        toggleCompleted(state.allExpenses, k);
+                        refreshExpenses(state);
+                        break;
+                    }
+                }
+            }
+            popBtnStyle();
+            ImGui::PopID();
+
+            // ── Edit ──────────────────────────────────────────────────────
+            ImGui::TableSetColumnIndex(6);
+            ImGui::PushID(e.id * 10 + 1);
+            pushBtnStyle(COL_BTN_EDIT);
+            if (ImGui::SmallButton("Edit") && userIdx >= 0) {
+                state.editIdx = userIdx;
+                state.switchToEdit = true;
+                snprintf(state.formDesc, sizeof(state.formDesc),
+                    "%s", e.description.c_str());
+                state.formAmount = (float)e.amount;
+                state.formCategory = (int)e.category;
+                state.formDay = e.day;
+                state.formMonth = e.month;
+                state.formYear = e.year;
+            }
+            popBtnStyle();
+            ImGui::PopID();
+
+            // ── Delete ────────────────────────────────────────────────────
+            // FIX: store deleteIdx and open popup AFTER the table loop ends,
+            // so the popup is in the same ID scope as where we call
+            // BeginPopupModal (inside renderDeleteModal below).
+            ImGui::TableSetColumnIndex(7);
+            ImGui::PushID(e.id * 10 + 2);
+            pushBtnStyle(COL_BTN_DANGER);
+            if (ImGui::SmallButton("Del") && userIdx >= 0) {
+                pendingDeleteUserIdx = userIdx;   // remember, open popup after table
+            }
+            popBtnStyle();
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleColor(4);
+
+    // FIX: Open the popup and call the modal OUTSIDE the table and all PushID
+    // scopes.  ImGui::OpenPopup must be in the same window / ID-stack level as
+    // BeginPopupModal, otherwise the popup can never be found.
+    if (pendingDeleteUserIdx >= 0) {
+        state.deleteIdx = pendingDeleteUserIdx;
+        ImGui::OpenPopup("Confirm Delete##modal");
+    }
+    renderDeleteModal(state);
+}
