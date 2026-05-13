@@ -4,7 +4,7 @@
 </div>
 <h3 align="center"> Application name: Spendora </h3> 
 <div align="center">
-    <img src = "" width = "300" height ="300" alt = "App logo" />
+    <img width="450" height="125" alt="ChatGPT Image 12 05 2026 г , 21_50_35" src="https://github.com/user-attachments/assets/91cfd842-d6b3-4faf-9e87-a74205e4e371" />
     </div>
 <br>
     
@@ -32,8 +32,12 @@
 <h2 id="about-the-project">About The Project</h2>
     
 <p align="justify">
-“Spendora” is a smart expense tracking application focused on helping users control their monthly spending in a simple and effective way. The app includes a budget system with spending limits, progress tracking, and warning alerts when the limit is almost reached.
-It also offers useful expense statistics and filtering options that help users better understand and organize their financial activity. The clean design and practical features make the app easy and convenient to use every day.
+“Spendora” is a modern expense tracking application designed to help users manage their finances in a simple and efficient way. The application uses Dear ImGui for its user interface, providing a clean, fast, and responsive experience.
+ 
+The app includes a budget system where users can set monthly spending limits, track expenses through a progress bar, and receive warnings when they are close to exceeding their budget. It also features advanced filtering options by category and amount range, making expense management easier and more organized.
+ 
+Additionally, Spendora provides useful statistics such as average, highest, and lowest expenses, helping users better understand their spending habits.
+ 
 </p>
     
     
@@ -47,11 +51,12 @@ It also offers useful expense statistics and filtering options that help users b
 
 |                        Register/Login                                 |
 | :-------------------------------------------------------------------: | 
-![]()
+<img width="1680" height="1002" alt="Screenshot 2026-05-13 184217" src="https://github.com/user-attachments/assets/3bbf35d1-9fd0-4234-b32a-73aace08d362" />
 
 |                                Main menu                              |
 | :-------------------------------------------------------------------: | 
-![]()
+<img width="1680" height="1002" alt="Screenshot 2026-05-13 184325" src="https://github.com/user-attachments/assets/aff1d4ac-05a5-4868-83d5-b2fb3957fc51" />
+
 
 
 </details>
@@ -115,9 +120,9 @@ Email: IEGeorgiev24@codingburgas.bg
 <h2 id="documentation">📄Documentation</h2> 
 <hr>
 
-<img src="https://github.com/user-attachments/assets/3ad0c148-6e5a-4e1b-ba16-82f53b41d500" width="30" alt="MS Word Logo"> <a href="">Documentation</a>
+<img src="https://github.com/user-attachments/assets/3ad0c148-6e5a-4e1b-ba16-82f53b41d500" width="30" alt="MS Word Logo"> <a href="https://codingburgas-my.sharepoint.com/:w:/g/personal/itgeorgiev24_codingburgas_bg/IQA099VULHAcTL9PNcUI2H7sAXOq3OcaqowgPjb1frtDupY?wdExp=TEAMS-TREATMENT&web=1&CID=6b8597d2-5a37-4c2b-9e95-a87270c68d77">Documentation</a>
 <br>
-<img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Microsoft_PowerPoint_Logo.png" width="20" alt="MS PowerPoint Logo"> <a href="">Presentation</a>
+<img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Microsoft_PowerPoint_Logo.png" width="20" alt="MS PowerPoint Logo"> <a href="https://codingburgas-my.sharepoint.com/:p:/g/personal/itgeorgiev24_codingburgas_bg/IQB1TtR5fwHTTKsZls02mbzqAXJD0lyoz3zp2SrB-gmWSYU?rtime=PihFQgex3kg">Presentation</a>
 <br>
 
 </p>
