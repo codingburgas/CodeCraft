@@ -1,15 +1,8 @@
-/*
- * logic.cpp
- * Logic layer - sorting, searching, recursion, CRUD, auth, budget.
- */
 #include "../include/logic.h"
 #include "../include/data.h"
 #include <cctype>
 using namespace std;
 
-// ── AUTH ──────────────────────────────────────────────────────────────────
-
-// djb2 hash - converts password to a number stored as text
 string hashPassword(const string& p)
 {
     unsigned long h = 5381;
@@ -58,9 +51,6 @@ bool changePassword(vector<User>& users, const string& username,
     return false;
 }
 
-// ── SORTING ───────────────────────────────────────────────────────────────
-
-// Bubble Sort by amount ascending - compares neighbours, swaps if wrong order
 void bubbleSortByAmount(vector<Expense>& v)
 {
     int n = (int)v.size();
@@ -72,7 +62,6 @@ void bubbleSortByAmount(vector<Expense>& v)
     }
 }
 
-// Converts date to one integer for easy comparison e.g. 2024/05/01 -> 20240501
 static int dateInt(const Expense& e) { return e.year * 10000 + e.month * 100 + e.day; }
 
 static int partition(vector<Expense>& v, int low, int high)
@@ -84,7 +73,6 @@ static int partition(vector<Expense>& v, int low, int high)
     return i + 1;
 }
 
-// Quick Sort by date - divides around a pivot and sorts each half
 void quickSortByDate(vector<Expense>& v, int low, int high)
 {
     if (low < high) {
@@ -93,7 +81,6 @@ void quickSortByDate(vector<Expense>& v, int low, int high)
         quickSortByDate(v, pi + 1, high);
     }
 }
-// Bubble Sort by category enum value
 void bubbleSortByCategory(vector<Expense>& v)
 {
     int n = (int)v.size();
@@ -108,9 +95,6 @@ void bubbleSortByCategory(vector<Expense>& v)
     }
 }
 
-// ── SEARCHING ─────────────────────────────────────────────────────────────
-
-// Linear search - checks every description for keyword (case-insensitive)
 vector<int> linearSearch(const vector<Expense>& v, const string& keyword)
 {
     vector<int> results;
@@ -124,7 +108,6 @@ vector<int> linearSearch(const vector<Expense>& v, const string& keyword)
     return results;
 }
 
-// Binary search - requires sorted input; splits in half each step
 int binarySearch(const vector<Expense>& sorted, double target)
 {
     int low = 0, high = (int)sorted.size() - 1;
@@ -137,16 +120,12 @@ int binarySearch(const vector<Expense>& sorted, double target)
     return -1;
 }
 
-// ── RECURSION ─────────────────────────────────────────────────────────────
-
-// Sums all amounts from index i to end - base case: i reaches end
 double recursiveTotal(const vector<Expense>& v, int i, int end)
 {
     if (i >= end) return 0.0;
     return v[i].amount + recursiveTotal(v, i + 1, end);
 }
 
-// Sums amounts for a specific month/year, going backwards from i
 double recursiveMonthlyTotal(const vector<Expense>& v, int i, int month, int year)
 {
     if (i < 0) return 0.0;
@@ -154,14 +133,11 @@ double recursiveMonthlyTotal(const vector<Expense>& v, int i, int month, int yea
     return add + recursiveMonthlyTotal(v, i - 1, month, year);
 }
 
-// Counts expenses in a given category, going backwards from i
 int recursiveCountByCategory(const vector<Expense>& v, int i, Category cat)
 {
     if (i < 0) return 0;
     return (v[i].category == cat ? 1 : 0) + recursiveCountByCategory(v, i - 1, cat);
 }
-
-// ── CRUD ──────────────────────────────────────────────────────────────────
 
 bool addExpense(vector<Expense>& v, const string& user, const string& desc,
     double amount, Category cat, int day, int month, int year)
@@ -195,15 +171,12 @@ bool removeExpense(vector<Expense>& v, int idx)
     if (ok) v.erase(v.begin() + idx);
     return ok;
 }
-// Toggles the completed flag and saves to disk
 bool toggleCompleted(vector<Expense>& v, int idx)
 {
     if (idx < 0 || idx >= (int)v.size()) return false;
     v[idx].completed = !v[idx].completed;
     return updateExpense(v);
 }
-
-// ── FILTERING ─────────────────────────────────────────────────────────────
 
 vector<Expense> userExpenses(const vector<Expense>& all, const string& username)
 {
@@ -232,8 +205,6 @@ vector<Expense> filterByRange(const vector<Expense>& v, double minA, double maxA
     for (const auto& e : v) if (e.amount >= minA && e.amount <= maxA) r.push_back(e);
     return r;
 }
-
-// ── STATISTICS ────────────────────────────────────────────────────────────
 
 double totalExpenses(const vector<Expense>& v)
 {
@@ -266,8 +237,6 @@ void categoryTotals(const vector<Expense>& v, double totals[CAT_COUNT])
     for (const auto& e : v) totals[(int)e.category] += e.amount;
 }
 
-// ── BUDGET ────────────────────────────────────────────────────────────────
-
 bool setBudget(vector<Budget>& b, const string& user, int month, int year, double limit)
 {
     if (limit <= 0.0) return false;
@@ -287,7 +256,6 @@ double getBudget(const vector<Budget>& b, const string& user, int month, int yea
     return 0.0;
 }
 
-// Sums all expenses for the user in the given month/year
 double getBudgetUsed(const vector<Expense>& v, const string& user, int month, int year)
 {
     double total = 0.0;
@@ -296,8 +264,6 @@ double getBudgetUsed(const vector<Expense>& v, const string& user, int month, in
             total += e.amount;
     return total;
 }
-
-// ── VALIDATION ────────────────────────────────────────────────────────────
 
 bool isValidDate(int day, int month, int year)
 {
@@ -325,8 +291,6 @@ bool isValidEmail(const string& s)
     size_t dot = s.find('.', at);
     return dot != string::npos && dot > at + 1 && dot < s.size() - 1;
 }
-
-// ── LOADERS ───────────────────────────────────────────────────────────────
 
 vector<Expense> loadAllExpenses() { vector<Expense> v; loadExpenses(v); return v; }
 vector<User>    loadAllUsers() { vector<User>    v; loadUsers(v);    return v; }

@@ -1,15 +1,10 @@
-﻿/*
- * data.cpp
- * Data layer - file I/O for expenses, users and budgets.
- */
-#include "../include/data.h"
+﻿#include "../include/data.h"
 #include <fstream>
 #include <sstream>
 using namespace std;
 
 string categoryName(Category cat)
 {
-    // Array indexed by the Category enum value
     static const char* names[] = {
         "Food","Transport","Housing","Health",
         "Entertainment","Shopping","Education","Other"
@@ -17,9 +12,6 @@ string categoryName(Category cat)
     return (cat >= 0 && cat < CAT_COUNT) ? names[cat] : "Unknown";
 }
 
-// ── Expense serialisation ──────────────────────────────────────────────────
-
-// Converts one Expense to a pipe-separated text line
 static string expenseToLine(const Expense& e)
 {
     ostringstream s;
@@ -30,7 +22,6 @@ static string expenseToLine(const Expense& e)
     return s.str();
 }
 
-// Parses one text line back into an Expense
 static bool lineToExpense(const string& line, Expense& out)
 {
     istringstream s(line);
@@ -45,7 +36,6 @@ static bool lineToExpense(const string& line, Expense& out)
         getline(s, t, '|'); out.month = stoi(t);
         getline(s, t, '|'); out.year = stoi(t);
         getline(s, t, '|'); out.active = stoi(t);
-        // completed field - default false for old records without this field
         if (getline(s, t, '|')) out.completed = stoi(t);
         else                   out.completed = false;
     }
@@ -95,8 +85,6 @@ int nextExpenseId(const vector<Expense>& src)
     return maxId + 1;
 }
 
-// ── User serialisation ─────────────────────────────────────────────────────
-
 static string userToLine(const User& u)
 {
     ostringstream s;
@@ -133,8 +121,6 @@ bool saveUsers(const vector<User>& src)
     for (const auto& u : src) f << userToLine(u) << "\n";
     return f.good();
 }
-
-// ── Budget serialisation ───────────────────────────────────────────────────
 
 static string budgetToLine(const Budget& b)
 {

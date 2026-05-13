@@ -7,23 +7,19 @@ using namespace std;
 enum Screen { SCREEN_LOGIN = 0, SCREEN_REGISTER, SCREEN_DASHBOARD };
 
 struct AppState {
-    // Data
     vector<Expense>      allExpenses;
     vector<User>         users;
     vector<Budget>       budgets;
     vector<Notification> notifications;
 
-    // Session
     Screen currentScreen = SCREEN_LOGIN;
     string loggedInUser = "";
-    vector<Expense> expenses;   // filtered view for logged-in user
+    vector<Expense> expenses;        
 
-    // Login form
     char loginUser[64] = {};
     char loginPass[64] = {};
     char loginError[256] = {};
 
-    // Register form
     char regUser[64] = {};
     char regPass[64] = {};
     char regPass2[64] = {};
@@ -31,7 +27,6 @@ struct AppState {
     char regError[256] = {};
     char regSuccess[256] = {};
 
-    // Add/Edit form
     char  formDesc[256] = {};
     float formAmount = 0.0f;
     int   formCategory = 0;
@@ -39,7 +34,6 @@ struct AppState {
     int   formMonth = 1;
     int   formYear = 2024;
 
-    // Sort & filter
     int   sortMode = 0;
     int   filterMonth = 0;
     int   filterYear = 2024;
@@ -49,7 +43,6 @@ struct AppState {
     float filterMaxAmt = 0.0f;
     bool  useAmountFilter = false;
 
-    // Search
     char        searchKeyword[256] = {};
     float       searchAmount = 0.0f;
     vector<int> linearResults;
@@ -57,16 +50,13 @@ struct AppState {
     int         binaryResult = -1;
     bool        binaryDone = false;
 
-    // Edit / Delete
     int  editIdx = -1;
     int  deleteIdx = -1;
 
-    // Budget panel
     float budgetLimit = 0.0f;
     int   budgetMonth = 1;
     int   budgetYear = 2024;
 
-    // Settings / notifications
     char cpOldPass[64] = {};
     char cpNewPass[64] = {};
     char cpNewPass2[64] = {};
@@ -76,11 +66,9 @@ struct AppState {
     bool showNotifCenter = false;
     bool switchToEdit = false;
 
-    // Status bar
     char statusMsg[512] = {};
     bool statusError = false;
 
-    // Budget alert tracking (avoid duplicate notifications)
     bool notif90Sent = false;
     bool notif100Sent = false;
 };

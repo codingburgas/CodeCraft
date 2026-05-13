@@ -19,29 +19,29 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="imgui\imgui_tables.cpp" />
-    <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="assets\imgui.cpp" />
+    <ClCompile Include="assets\imgui_demo.cpp" />
+    <ClCompile Include="assets\imgui_draw.cpp" />
+    <ClCompile Include="assets\imgui_impl_glfw.cpp" />
+    <ClCompile Include="assets\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="assets\imgui_tables.cpp" />
+    <ClCompile Include="assets\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\data.cpp" />
     <ClCompile Include="src\logic.cpp" />
     <ClCompile Include="src\presentation.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="imgui\glfw3.h" />
-    <ClInclude Include="imgui\glfw3native.h" />
-    <ClInclude Include="imgui\imgui.h" />
-    <ClInclude Include="imgui\imgui_impl_glfw.h" />
-    <ClInclude Include="imgui\imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui\imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="imgui\imgui_internal.h" />
-    <ClInclude Include="imgui\imstb_rectpack.h" />
-    <ClInclude Include="imgui\imstb_textedit.h" />
-    <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="assets\glfw3.h" />
+    <ClInclude Include="assets\glfw3native.h" />
+    <ClInclude Include="assets\imgui.h" />
+    <ClInclude Include="assets\imgui_impl_glfw.h" />
+    <ClInclude Include="assets\imgui_impl_opengl3.h" />
+    <ClInclude Include="assets\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="assets\imgui_internal.h" />
+    <ClInclude Include="assets\imstb_rectpack.h" />
+    <ClInclude Include="assets\\imstb_textedit.h" />
+    <ClInclude Include="assets\imstb_truetype.h" />
     <ClInclude Include="include\data.h" />
     <ClInclude Include="include\logic.h" />
     <ClInclude Include="include\presentation.h" />

@@ -1,7 +1,4 @@
-/*
- * data.h
- * Data layer - core structures and file I/O prototypes.
- */
+
 #pragma once
 #include <string>
 #include <vector>
@@ -26,7 +23,7 @@ struct Expense {
     Category category;
     int      day, month, year;
     bool     active;
-    bool     completed;   // NEW: marks an expense as "done/paid"
+    bool     completed;   
 };
 
 struct User {
@@ -42,7 +39,7 @@ struct Budget {
     double limit;
 };
 
-// Notification struct
+
 struct Notification {
     string message;
     bool   read;

@@ -1,14 +1,4 @@
-﻿/*
- * presentation.cpp
- * Presentation layer - Dear ImGui UI.
- *
- * REQUIRES (copy manually into project folder):
- *   imgui.h/cpp, imgui_draw.cpp, imgui_tables.cpp, imgui_widgets.cpp,
- *   imgui_demo.cpp, imgui_internal.h, imconfig.h, imstb_*.h
- *   imgui_impl_glfw.h/cpp, imgui_impl_opengl3.h/cpp,
- *   imgui_impl_opengl3_loader.h, glfw3.h, glfw3dll.lib, glfw3.dll
- */
-#include "../include/presentation.h"
+﻿#include "../include/presentation.h"
 #include "../include/logic.h"
 #include "../assets/imgui.h"
 #include "../assets/imgui_impl_glfw.h"
@@ -21,7 +11,6 @@
 #include <cmath>
 using namespace std;
 
-// ── Colour palette (dark professional theme) ───────────────────────────────
 static const ImVec4 COL_BG_DEEP = ImVec4(0.06f, 0.07f, 0.10f, 1.0f);
 static const ImVec4 COL_BG_PANEL = ImVec4(0.10f, 0.11f, 0.15f, 1.0f);
 static const ImVec4 COL_BG_WIDGET = ImVec4(0.14f, 0.15f, 0.20f, 1.0f);
@@ -42,14 +31,14 @@ static const ImVec4 COL_BTN_EDIT = ImVec4(0.18f, 0.44f, 0.80f, 0.90f);
 static const ImVec4 COL_BTN_WARN = ImVec4(0.75f, 0.45f, 0.08f, 1.0f);
 
 static const ImVec4 CAT_COLS[CAT_COUNT] = {
-    ImVec4(0.96f,0.65f,0.14f,1.0f), // Food
-    ImVec4(0.20f,0.72f,0.90f,1.0f), // Transport
-    ImVec4(0.55f,0.36f,0.96f,1.0f), // Housing
-    ImVec4(0.22f,0.84f,0.55f,1.0f), // Health
-    ImVec4(0.94f,0.42f,0.64f,1.0f), // Entertainment
-    ImVec4(0.97f,0.80f,0.20f,1.0f), // Shopping
-    ImVec4(0.30f,0.78f,0.70f,1.0f), // Education
-    ImVec4(0.70f,0.70f,0.70f,1.0f), // Other
+    ImVec4(0.96f,0.65f,0.14f,1.0f),  
+    ImVec4(0.20f,0.72f,0.90f,1.0f),  
+    ImVec4(0.55f,0.36f,0.96f,1.0f),  
+    ImVec4(0.22f,0.84f,0.55f,1.0f),  
+    ImVec4(0.94f,0.42f,0.64f,1.0f),  
+    ImVec4(0.97f,0.80f,0.20f,1.0f),  
+    ImVec4(0.30f,0.78f,0.70f,1.0f),  
+    ImVec4(0.70f,0.70f,0.70f,1.0f),  
 };
 
 static const char* CAT_NAMES[CAT_COUNT] = {
@@ -62,16 +51,12 @@ static const char* MONTHS[] = {
     "July","August","September","October","November","December"
 };
 
-// ── Animation helpers ──────────────────────────────────────────────────────
-
-// Returns a value [0..1] that pulses with time - use for glowing effects
 static float pulse(float speed = 2.0f, float minVal = 0.7f)
 {
     float t = (float)ImGui::GetTime();
     return minVal + (1.0f - minVal) * (0.5f + 0.5f * sinf(t * speed));
 }
 
-// Lerp between two colours using a 0..1 factor
 static ImVec4 lerpColor(const ImVec4& a, const ImVec4& b, float t)
 {
     return ImVec4(
@@ -81,7 +66,6 @@ static ImVec4 lerpColor(const ImVec4& a, const ImVec4& b, float t)
         a.w + (b.w - a.w) * t);
 }
 
-// Slightly brighten a colour for hover state
 static ImVec4 brighten(const ImVec4& c, float f = 1.25f)
 {
     return ImVec4(
@@ -91,7 +75,6 @@ static ImVec4 brighten(const ImVec4& c, float f = 1.25f)
         c.w);
 }
 
-// Push a full styled button (normal + hovered + active colours)
 static void pushBtnStyle(const ImVec4& base)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, base);
@@ -100,7 +83,6 @@ static void pushBtnStyle(const ImVec4& base)
 }
 static void popBtnStyle() { ImGui::PopStyleColor(3); }
 
-// Animated underline accent - draws a horizontal gradient line under cursor
 static void accentLine(float width = -1.0f)
 {
     float w = (width < 0) ? ImGui::GetContentRegionAvail().x : width;
@@ -113,7 +95,6 @@ static void accentLine(float width = -1.0f)
     ImGui::Dummy(ImVec2(w, h));
 }
 
-// Draw a small coloured dot (category indicator)
 static void colorDot(const ImVec4& col, float r = 4.0f)
 {
     ImVec2 cp = ImGui::GetCursorScreenPos();
@@ -122,8 +103,6 @@ static void colorDot(const ImVec4& col, float r = 4.0f)
         ImGui::ColorConvertFloat4ToU32(col), 12);
     ImGui::Dummy(ImVec2(r * 2.0f + 4.0f, r * 2.0f));
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 static void setStatus(AppState& s, const char* msg, bool err = false)
 {
@@ -168,7 +147,6 @@ static int unreadCount(const AppState& state)
     return n;
 }
 
-// ── Section header helper ──────────────────────────────────────────────────
 static void sectionHeader(const char* title, const ImVec4& col = COL_ACCENT)
 {
     ImGui::Spacing();
@@ -179,25 +157,19 @@ static void sectionHeader(const char* title, const ImVec4& col = COL_ACCENT)
     ImGui::Spacing();
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderLoginScreen
-// ────────────────────────────────────────────────────────────────────────────
 void renderLoginScreen(AppState& state)
 {
     ImGuiIO& io = ImGui::GetIO();
     float W = io.DisplaySize.x, H = io.DisplaySize.y;
     float t = (float)ImGui::GetTime();
 
-    // ── Full-screen custom background ─────────────────────────────────────────
     ImDrawList* bg = ImGui::GetBackgroundDrawList();
 
-    // Deep navy gradient
     bg->AddRectFilledMultiColor(
         ImVec2(0, 0), ImVec2(W, H),
         IM_COL32(6, 8, 18, 255), IM_COL32(8, 12, 28, 255),
         IM_COL32(10, 8, 20, 255), IM_COL32(6, 8, 18, 255));
 
-    // Animated concentric rings
     for (int i = 0; i < 4; i++) {
         float r = 200.0f + i * 90.0f + 20.0f * sinf(t * 0.4f + i);
         float a = (int)(22 - i * 4 + 6 * sinf(t * 0.5f + i));
@@ -205,7 +177,6 @@ void renderLoginScreen(AppState& state)
             IM_COL32(40, 90, 200, (int)a), 64, 1.2f);
     }
 
-    // Moving particles
     for (int i = 0; i < 18; i++) {
         float px = W * (0.05f + 0.055f * i + 0.012f * sinf(t * 0.3f + i * 1.3f));
         float py = H * (0.1f + 0.05f * i + 0.015f * cosf(t * 0.25f + i * 0.9f));
@@ -214,14 +185,12 @@ void renderLoginScreen(AppState& state)
         bg->AddCircleFilled(ImVec2(px, py), pr, IM_COL32(80, 140, 255, pa));
     }
 
-    // Diagonal light streak
     {
         float sx = W * (0.3f + 0.05f * sinf(t * 0.2f));
         ImU32 strk = IM_COL32(60, 110, 220, (int)(18 + 10 * sinf(t * 0.3f)));
         bg->AddLine(ImVec2(sx, 0), ImVec2(sx + 300, H), strk, 60.0f);
     }
 
-    // ── Card window ───────────────────────────────────────────────────────────
     float CW = 400.0f, CH = 340.0f;
     float cx = (W - CW) * 0.5f, cy = (H - CH) * 0.5f;
 
@@ -235,7 +204,6 @@ void renderLoginScreen(AppState& state)
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
     ImGui::PopStyleVar(2);
 
-    // Custom top accent bar inside card
     {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 wp = ImGui::GetWindowPos();
@@ -244,13 +212,11 @@ void renderLoginScreen(AppState& state)
         ImU32 aR = IM_COL32((int)(20 * ap), (int)(180 * ap), (int)(140 * ap), 180);
         ImU32 aT = IM_COL32(0, 0, 0, 0);
         dl->AddRectFilledMultiColor(wp, ImVec2(wp.x + CW, wp.y + 4), aL, aR, aR, aL);
-        // Corner glow dots
         dl->AddCircleFilled(ImVec2(wp.x + 1, wp.y + 1), 6, IM_COL32(60, 140, 255, 80));
         dl->AddCircleFilled(ImVec2(wp.x + CW - 1, wp.y + 1), 6, IM_COL32(40, 200, 160, 60));
         (void)aT;
     }
 
-    // Title
     ImGui::Spacing();
     float tp2 = pulse(1.3f, 0.75f);
     ImVec4 tC = lerpColor(COL_ACCENT, COL_ACCENT2, tp2);
@@ -263,7 +229,6 @@ void renderLoginScreen(AppState& state)
     ImGui::PopStyleColor();
     ImGui::SetWindowFontScale(1.0f);
 
-    // Tagline
     const char* sub = "Track. Analyse. Save.";
     float sw = ImGui::CalcTextSize(sub).x;
     ImGui::SetCursorPosX((CW - sw) * 0.5f);
@@ -273,7 +238,6 @@ void renderLoginScreen(AppState& state)
     accentLine();
     ImGui::Spacing();
 
-    // Fields
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.13f, 0.15f, 0.22f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.17f, 0.20f, 0.30f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
@@ -296,7 +260,6 @@ void renderLoginScreen(AppState& state)
     }
     ImGui::Spacing();
 
-    // Big login button
     pushBtnStyle(COL_BTN_PRIMARY);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 9));
@@ -332,16 +295,12 @@ void renderLoginScreen(AppState& state)
     ImGui::End();
     ImGui::PopStyleColor(2);
 }
-// ────────────────────────────────────────────────────────────────────────────
-//  renderRegisterScreen
-// ────────────────────────────────────────────────────────────────────────────
 void renderRegisterScreen(AppState& state)
 {
     ImGuiIO& io = ImGui::GetIO();
     float W = io.DisplaySize.x, H = io.DisplaySize.y;
     float t = (float)ImGui::GetTime();
 
-    // Same rich animated background as login
     ImDrawList* bg = ImGui::GetBackgroundDrawList();
     bg->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(W, H),
         IM_COL32(6, 8, 18, 255), IM_COL32(8, 12, 28, 255),
@@ -357,7 +316,6 @@ void renderRegisterScreen(AppState& state)
         bg->AddCircleFilled(ImVec2(px, py), 1.5f + sinf(t + i),
             IM_COL32(80, 140, 255, (int)(25 + 20 * sinf(t * 0.6f + i))));
     }
-    // Green tint streak for "create" feel
     bg->AddLine(ImVec2(W * 0.7f, 0), ImVec2(W * 0.7f + 200, H),
         IM_COL32(20, 120, 80, (int)(12 + 6 * sinf(t * 0.2f))), 50.0f);
 
@@ -374,7 +332,6 @@ void renderRegisterScreen(AppState& state)
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
     ImGui::PopStyleVar(2);
 
-    // Green top accent bar
     {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 wp = ImGui::GetWindowPos();
@@ -386,7 +343,6 @@ void renderRegisterScreen(AppState& state)
         dl->AddCircleFilled(ImVec2(wp.x + CW - 1, wp.y + 1), 6, IM_COL32(40, 130, 220, 60));
     }
 
-    // Title
     ImGui::Spacing();
     const char* title = "Create Account";
     float tw = ImGui::CalcTextSize(title).x;
@@ -475,9 +431,6 @@ void renderRegisterScreen(AppState& state)
     ImGui::PopStyleColor(2);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderHeader
-// ────────────────────────────────────────────────────────────────────────────
 void renderHeader(AppState& state)
 {
     const float HDR_H = 58.0f;
@@ -488,13 +441,11 @@ void renderHeader(AppState& state)
     ImVec2      wpos = ImGui::GetWindowPos();
     float       W = ImGui::GetWindowWidth();
 
-    // ── Gradient background ──────────────────────────────────────────────────
     ImU32 bgL = IM_COL32(14, 20, 38, 255);
     ImU32 bgR = IM_COL32(10, 14, 24, 255);
     dl->AddRectFilledMultiColor(wpos, ImVec2(wpos.x + W, wpos.y + HDR_H),
         bgL, bgR, bgR, bgL);
 
-    // Animated blue glow strip at the bottom of header
     float gp = pulse(1.5f, 0.4f);
     ImU32 glowC = IM_COL32((int)(40 * gp), (int)(100 * gp), (int)(220 * gp), (int)(180 * gp));
     ImU32 glowT = IM_COL32(0, 0, 0, 0);
@@ -507,8 +458,6 @@ void renderHeader(AppState& state)
         ImVec2(wpos.x + W, wpos.y + HDR_H),
         glowC, glowT, glowT, glowC);
 
-    // ── Logo / Title ─────────────────────────────────────────────────────────
-    // Draw a small coloured square logo
     float lx = wpos.x + 14, ly = wpos.y + 14;
     dl->AddRectFilled(ImVec2(lx, ly), ImVec2(lx + 8, ly + 8),
         IM_COL32(80, 160, 255, 255), 2.0f);
@@ -526,7 +475,6 @@ void renderHeader(AppState& state)
     ImGui::SetWindowFontScale(1.0f);
     ImGui::PopStyleColor();
 
-    // ── Budget warning badge ─────────────────────────────────────────────────
     double used = getBudgetUsed(state.allExpenses, state.loggedInUser,
         state.budgetMonth, state.budgetYear);
     double limit = getBudget(state.budgets, state.loggedInUser,
@@ -537,18 +485,14 @@ void renderHeader(AppState& state)
         ImU32 badgeC = over
             ? IM_COL32((int)(220), (int)(50 + 60 * wp2), (int)(50 + 60 * wp2), 220)
             : IM_COL32(200, 140, 0, 210);
-        // Draw pill badge
         const char* warnTxt = over ? "!! Budget exceeded !!" : "! Near limit";
         ImVec2 ts = ImGui::CalcTextSize(warnTxt);
         float bx = wpos.x + 230, by = wpos.y + 18;
         dl->AddRectFilled(ImVec2(bx - 6, by - 3), ImVec2(bx + ts.x + 6, by + ts.y + 3), badgeC, 6.0f);
         dl->AddText(ImVec2(bx, by), IM_COL32(255, 255, 255, 255), warnTxt);
-        ImGui::Dummy(ImVec2(0, 0)); // keep layout flowing
+        ImGui::Dummy(ImVec2(0, 0));    
     }
 
-    // ── Right side: total, user, buttons ────────────────────────────────────
-    // Layout (right-to-left): Buttons ~200px | User pill ~80px | Total pill ~130px
-    // Total pill - leftmost of the right group
     {
         char totTxt[48];
         snprintf(totTxt, sizeof(totTxt), "%.2f EUR", totalExpenses(state.expenses));
@@ -561,7 +505,6 @@ void renderHeader(AppState& state)
         dl->AddText(ImVec2(bx, by), IM_COL32(130, 170, 255, 255), "Total ");
         dl->AddText(ImVec2(bx + twTotal, by), IM_COL32(100, 200, 255, 255), totTxt);
     }
-    // User pill
     {
         float bx = wpos.x + W - 290, by = wpos.y + 14;
         ImVec2 ts = ImGui::CalcTextSize(state.loggedInUser.c_str());
@@ -570,7 +513,6 @@ void renderHeader(AppState& state)
         dl->AddText(ImVec2(bx, by), IM_COL32(80, 220, 120, 255), state.loggedInUser.c_str());
     }
 
-    // Buttons on the far right
     ImGui::SameLine(W - 200);
     ImGui::SetCursorPosY(15);
 
@@ -603,12 +545,8 @@ void renderHeader(AppState& state)
     ImGui::PopStyleColor();
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderDeleteModal
-// ────────────────────────────────────────────────────────────────────────────
 void renderDeleteModal(AppState& state)
 {
-    // The popup ID must match exactly what was passed to OpenPopup
     if (!ImGui::BeginPopupModal("Confirm Delete##modal", nullptr,
         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
         return;
@@ -656,12 +594,8 @@ void renderDeleteModal(AppState& state)
     ImGui::EndPopup();
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderExpenseTable
-// ────────────────────────────────────────────────────────────────────────────
 void renderExpenseTable(AppState& state)
 {
-    // ── Filter/sort bar ─────────────────────────────────────────────────────
     ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
 
     ImGui::TextColored(COL_MUTED, "Sort:");
@@ -701,7 +635,6 @@ void renderExpenseTable(AppState& state)
 
     ImGui::PopStyleColor();
 
-    // ── Build display list ───────────────────────────────────────────────────
     vector<Expense> disp = state.expenses;
     if (state.filterMonth > 0)
         disp = filterByMonth(disp, state.filterMonth, state.filterYear);
@@ -715,7 +648,6 @@ void renderExpenseTable(AppState& state)
         quickSortByDate(disp, 0, (int)disp.size() - 1);
     else if (state.sortMode == 2) bubbleSortByCategory(disp);
 
-    // ── Record count badge ───────────────────────────────────────────────────
     ImGui::Spacing();
     {
         ImVec2 cp = ImGui::GetCursorScreenPos();
@@ -729,20 +661,17 @@ void renderExpenseTable(AppState& state)
     }
     ImGui::Spacing();
 
-    // ── Table ────────────────────────────────────────────────────────────────
     const ImGuiTableFlags tflags =
         ImGuiTableFlags_Borders |
         ImGuiTableFlags_RowBg |
         ImGuiTableFlags_ScrollY |
         ImGuiTableFlags_SizingStretchProp;
 
-    // Subtle alternating row tint
     ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.10f, 0.11f, 0.15f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.12f, 0.13f, 0.18f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_TableBorderLight, COL_SEPARATOR);
     ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.22f, 0.40f, 0.75f, 0.5f));
 
-    // FIX: declared BEFORE BeginTable so it remains in scope after EndTable
     int pendingDeleteUserIdx = -1;
 
     float tableH = ImGui::GetContentRegionAvail().y - 28.0f;
@@ -758,7 +687,6 @@ void renderExpenseTable(AppState& state)
         ImGui::TableSetupColumn("Edit", ImGuiTableColumnFlags_WidthFixed, 38);
         ImGui::TableSetupColumn("Del", ImGuiTableColumnFlags_WidthFixed, 34);
 
-        // Styled header row
         ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.14f, 0.22f, 0.40f, 1.0f));
         ImGui::TableHeadersRow();
         ImGui::PopStyleColor();
@@ -775,11 +703,9 @@ void renderExpenseTable(AppState& state)
             ImVec4 textCol = e.completed ? COL_DONE : ImVec4(0.92f, 0.93f, 0.95f, 1.0f);
             ImVec4 catC = e.completed ? COL_DONE : CAT_COLS[e.category];
 
-            // Col 0: ID with left coloured category bar drawn via DrawList
             ImGui::TableSetColumnIndex(0);
             {
                 ImVec2 rmin = ImGui::GetCursorScreenPos();
-                // 3px category colour bar on the left of the row
                 ImGui::GetWindowDrawList()->AddRectFilled(
                     ImVec2(rmin.x - 6, rmin.y),
                     ImVec2(rmin.x - 3, rmin.y + 22),
@@ -787,7 +713,6 @@ void renderExpenseTable(AppState& state)
             }
             ImGui::TextColored(COL_MUTED, "%d", e.id);
 
-            // Col 1: Description (with strikethrough if done)
             ImGui::TableSetColumnIndex(1);
             ImGui::TextColored(textCol, "%s", e.description.c_str());
             if (e.completed) {
@@ -799,11 +724,9 @@ void renderExpenseTable(AppState& state)
                     ImGui::ColorConvertFloat4ToU32(COL_DONE), 1.2f);
             }
 
-            // Col 2: Amount — green tint for normal, muted for done
             ImGui::TableSetColumnIndex(2);
             ImGui::TextColored(e.completed ? COL_DONE : COL_ACCENT2, "%.2f", e.amount);
 
-            // Col 3: Category — dot + name
             ImGui::TableSetColumnIndex(3);
             {
                 ImVec2 cp = ImGui::GetCursorScreenPos();
@@ -814,12 +737,10 @@ void renderExpenseTable(AppState& state)
                 ImGui::TextColored(catC, "%s", CAT_NAMES[e.category]);
             }
 
-            // Col 4: Date
             ImGui::TableSetColumnIndex(4);
             ImGui::TextColored(ImVec4(0.55f, 0.60f, 0.70f, 1.0f),
                 "%02d/%02d/%04d", e.month, e.day, e.year);
 
-            // ── Done toggle ────────────────────────────────────────────────
             ImGui::TableSetColumnIndex(5);
             ImGui::PushID(e.id * 10 + 3);
             pushBtnStyle(e.completed
@@ -838,7 +759,6 @@ void renderExpenseTable(AppState& state)
             popBtnStyle();
             ImGui::PopID();
 
-            // ── Edit ──────────────────────────────────────────────────────
             ImGui::TableSetColumnIndex(6);
             ImGui::PushID(e.id * 10 + 1);
             pushBtnStyle(COL_BTN_EDIT);
@@ -856,15 +776,11 @@ void renderExpenseTable(AppState& state)
             popBtnStyle();
             ImGui::PopID();
 
-            // ── Delete ────────────────────────────────────────────────────
-            // FIX: store deleteIdx and open popup AFTER the table loop ends,
-            // so the popup is in the same ID scope as where we call
-            // BeginPopupModal (inside renderDeleteModal below).
             ImGui::TableSetColumnIndex(7);
             ImGui::PushID(e.id * 10 + 2);
             pushBtnStyle(COL_BTN_DANGER);
             if (ImGui::SmallButton("Del") && userIdx >= 0) {
-                pendingDeleteUserIdx = userIdx;   // remember, open popup after table
+                pendingDeleteUserIdx = userIdx;        
             }
             popBtnStyle();
             ImGui::PopID();
@@ -873,9 +789,6 @@ void renderExpenseTable(AppState& state)
     }
     ImGui::PopStyleColor(4);
 
-    // FIX: Open the popup and call the modal OUTSIDE the table and all PushID
-    // scopes.  ImGui::OpenPopup must be in the same window / ID-stack level as
-    // BeginPopupModal, otherwise the popup can never be found.
     if (pendingDeleteUserIdx >= 0) {
         state.deleteIdx = pendingDeleteUserIdx;
         ImGui::OpenPopup("Confirm Delete##modal");
@@ -883,19 +796,14 @@ void renderExpenseTable(AppState& state)
     renderDeleteModal(state);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderFormPanel  (shared by Add and Edit tabs)
-// ────────────────────────────────────────────────────────────────────────────
 void renderFormPanel(AppState& state)
 {
     bool editing = (state.editIdx >= 0);
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // Section header with icon indicator
     {
         ImVec2 cp = ImGui::GetCursorScreenPos();
         float  W = ImGui::GetContentRegionAvail().x;
-        // Header pill background
         ImU32 hbg = editing ? IM_COL32(15, 50, 20, 200) : IM_COL32(12, 30, 70, 200);
         dl->AddRectFilled(cp, ImVec2(cp.x + W, cp.y + 26), hbg, 5.0f);
         ImU32 hln = editing ? IM_COL32(40, 200, 80, 180) : IM_COL32(60, 130, 255, 180);
@@ -908,7 +816,6 @@ void renderFormPanel(AppState& state)
     }
     ImGui::Spacing();
 
-    // Field styling
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.11f, 0.13f, 0.20f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.15f, 0.18f, 0.28f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.18f, 0.22f, 0.34f, 1.0f));
@@ -926,7 +833,6 @@ void renderFormPanel(AppState& state)
 
     ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "Category");
-    // Draw category colour swatch before the combo
     {
         ImVec2 cp = ImGui::GetCursorScreenPos();
         dl->AddRectFilled(ImVec2(cp.x, cp.y + 3),
@@ -939,7 +845,6 @@ void renderFormPanel(AppState& state)
 
     ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "Date  (DD / MM / YYYY)");
-    // Day
     pushBtnStyle(COL_BTN_PRIMARY);
     if (ImGui::SmallButton("-##dd")) { if (state.formDay > 1) state.formDay--; }
     ImGui::SameLine(0, 2);
@@ -953,7 +858,6 @@ void renderFormPanel(AppState& state)
     if (state.formDay < 1) state.formDay = 1;
     if (state.formDay > 31) state.formDay = 31;
     ImGui::SameLine(0, 4); ImGui::TextColored(COL_MUTED, "/"); ImGui::SameLine(0, 4);
-    // Month
     pushBtnStyle(COL_BTN_PRIMARY);
     if (ImGui::SmallButton("-##mm")) { if (state.formMonth > 1) state.formMonth--; }
     ImGui::SameLine(0, 2);
@@ -967,7 +871,6 @@ void renderFormPanel(AppState& state)
     if (state.formMonth < 1) state.formMonth = 1;
     if (state.formMonth > 12) state.formMonth = 12;
     ImGui::SameLine(0, 4); ImGui::TextColored(COL_MUTED, "/"); ImGui::SameLine(0, 4);
-    // Year
     pushBtnStyle(COL_BTN_PRIMARY);
     if (ImGui::SmallButton("-##yy")) { state.formYear--; }
     ImGui::SameLine(0, 2);
@@ -983,7 +886,6 @@ void renderFormPanel(AppState& state)
     ImGui::PopStyleColor(3);
 
     ImGui::Spacing();
-    // Divider
     {
         ImVec2 cp = ImGui::GetCursorScreenPos();
         float W = ImGui::GetContentRegionAvail().x;
@@ -1046,9 +948,6 @@ void renderFormPanel(AppState& state)
     ImGui::PopStyleVar(2);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderSearchPanel
-// ────────────────────────────────────────────────────────────────────────────
 void renderSearchPanel(AppState& state)
 {
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -1177,9 +1076,6 @@ void renderSearchPanel(AppState& state)
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderStatsPanel
-// ────────────────────────────────────────────────────────────────────────────
 void renderStatsPanel(AppState& state)
 {
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -1196,7 +1092,6 @@ void renderStatsPanel(AppState& state)
     double highest = maxExpense(state.expenses);
     double lowest = minExpense(state.expenses);
 
-    // ── 4 summary cards ──────────────────────────────────────────────────────
     struct CardDef { const char* label; const char* icon; double val; ImU32 glowC; ImVec4 textC; };
     CardDef cards[4] = {
         { "Total Spent",  "E", total,   IM_COL32(50,120,255,60),  COL_ACCENT  },
@@ -1212,18 +1107,15 @@ void renderStatsPanel(AppState& state)
     for (int ci = 0; ci < 4; ci++) {
         ImVec2 cp = ImGui::GetCursorScreenPos();
 
-        // Card background + border + top accent
         dl->AddRectFilled(cp, ImVec2(cp.x + cardW, cp.y + cardH), IM_COL32(16, 18, 28, 255), 8.0f);
         dl->AddRect(cp, ImVec2(cp.x + cardW, cp.y + cardH), cards[ci].glowC, 8.0f, 0, 1.5f);
         ImU32 lineC = ImGui::ColorConvertFloat4ToU32(
             ImVec4(cards[ci].textC.x, cards[ci].textC.y, cards[ci].textC.z, 0.8f));
         dl->AddRectFilled(cp, ImVec2(cp.x + cardW, cp.y + 3), lineC, 8.0f);
 
-        // Label (top-left)
         ImGui::SetCursorScreenPos(ImVec2(cp.x + 12, cp.y + 9));
         ImGui::TextColored(ImVec4(0.50f, 0.54f, 0.62f, 1.0f), "%s", cards[ci].label);
 
-        // Value (bottom-right, larger)
         char valStr[32]; snprintf(valStr, sizeof(valStr), "%.2f EUR", cards[ci].val);
         ImGui::SetWindowFontScale(1.18f);
         float vw = ImGui::CalcTextSize(valStr).x;
@@ -1232,7 +1124,6 @@ void renderStatsPanel(AppState& state)
         ImGui::TextColored(cards[ci].textC, "%s", valStr);
         ImGui::SetWindowFontScale(1.0f);
 
-        // Restore cursor to below the card
         ImGui::SetCursorScreenPos(ImVec2(cp.x, cp.y + cardH + 4));
         ImGui::Dummy(ImVec2(cardW, 0));
         if (ci == 0 || ci == 2) { ImGui::SameLine(0, 12); }
@@ -1242,7 +1133,6 @@ void renderStatsPanel(AppState& state)
     ImGui::TextColored(COL_MUTED, "  %d records", (int)state.expenses.size());
     ImGui::Spacing();
 
-    // ── Category breakdown with custom bars ──────────────────────────────────
     sectionHeader("By Category");
     double catTot[CAT_COUNT] = {};
     categoryTotals(state.expenses, catTot);
@@ -1257,22 +1147,17 @@ void renderStatsPanel(AppState& state)
 
         ImVec2 rowP = ImGui::GetCursorScreenPos();
 
-        // Dot
         dl->AddCircleFilled(ImVec2(rowP.x + 6, rowP.y + 9), 5.0f,
             ImGui::ColorConvertFloat4ToU32(CAT_COLS[i]), 12);
 
-        // Name
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
         ImGui::TextColored(CAT_COLS[i], "%-13s", CAT_NAMES[i]);
         ImGui::SameLine(0, 6);
 
-        // Custom bar
         ImVec2 barP = ImGui::GetCursorScreenPos();
         float  bh = 14.0f;
-        // Track
         dl->AddRectFilled(barP, ImVec2(barP.x + barW, barP.y + bh),
             IM_COL32(20, 22, 32, 220), 3.0f);
-        // Fill with gradient
         ImU32 fillL = ImGui::ColorConvertFloat4ToU32(CAT_COLS[i]);
         ImU32 fillR = IM_COL32(
             (int)(CAT_COLS[i].x * 180), (int)(CAT_COLS[i].y * 180),
@@ -1280,7 +1165,6 @@ void renderStatsPanel(AppState& state)
         dl->AddRectFilledMultiColor(barP,
             ImVec2(barP.x + barW * frac, barP.y + bh), fillL, fillR, fillR, fillL);
 
-        // Label
         char lbl[32]; snprintf(lbl, sizeof(lbl), "%.0f EUR (%d)", catTot[i], cnt);
         dl->AddText(ImVec2(barP.x + barW + 6, barP.y),
             IM_COL32(160, 170, 190, 255), lbl);
@@ -1288,7 +1172,6 @@ void renderStatsPanel(AppState& state)
         ImGui::Dummy(ImVec2(barW + 70, bh + 4));
     }
 
-    // ── Monthly bars ─────────────────────────────────────────────────────────
     ImGui::Spacing();
     sectionHeader("Monthly Breakdown");
     ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_WIDGET);
@@ -1328,15 +1211,11 @@ void renderStatsPanel(AppState& state)
     if (!any) ImGui::TextColored(COL_MUTED, "No expenses in %d.", state.statsYear);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderBudgetPanel
-// ────────────────────────────────────────────────────────────────────────────
 void renderBudgetPanel(AppState& state)
 {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     sectionHeader("Monthly Budget");
 
-    // Info pill
     {
         ImVec2 cp = ImGui::GetCursorScreenPos();
         float  W = ImGui::GetContentRegionAvail().x;
@@ -1352,7 +1231,6 @@ void renderBudgetPanel(AppState& state)
     }
     ImGui::Spacing();
 
-    // Month + year selectors
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.11f, 0.13f, 0.20f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.15f, 0.18f, 0.28f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
@@ -1378,16 +1256,13 @@ void renderBudgetPanel(AppState& state)
         bool  over = (used >= limit);
         bool  close = (!over && used >= limit * 0.9);
 
-        // ── Big progress card ────────────────────────────────────────────────
         float cW = ImGui::GetContentRegionAvail().x;
         float cH = 80.0f;
         ImVec2 cp = ImGui::GetCursorScreenPos();
 
-        // Card bg
         dl->AddRectFilled(cp, ImVec2(cp.x + cW, cp.y + cH),
             IM_COL32(14, 16, 26, 255), 8.0f);
 
-        // Percentage text inside card (top-left)
         char pctTxt[32];
         snprintf(pctTxt, sizeof(pctTxt), "%.1f%%", used / limit * 100.0);
         ImGui::SetWindowFontScale(1.35f);
@@ -1397,20 +1272,16 @@ void renderBudgetPanel(AppState& state)
         ImGui::TextColored(pctC, "%s", pctTxt);
         ImGui::SetWindowFontScale(1.0f);
 
-        // Amounts top-right
         char amtTxt[64];
         snprintf(amtTxt, sizeof(amtTxt), "%.2f / %.2f EUR", used, limit);
         float atw = ImGui::CalcTextSize(amtTxt).x;
         ImGui::SetCursorScreenPos(ImVec2(cp.x + cW - atw - 10, cp.y + 12));
         ImGui::TextColored(COL_MUTED, "%s", amtTxt);
 
-        // Progress bar (custom drawn)
         float barY = cp.y + cH - 22;
         float barH = 14.0f;
-        // Track
         dl->AddRectFilled(ImVec2(cp.x + 10, barY),
             ImVec2(cp.x + cW - 10, barY + barH), IM_COL32(20, 22, 32, 220), 5.0f);
-        // Fill gradient
         float fillX = cp.x + 10 + (cW - 20) * frac;
         ImU32 fillL = over ? IM_COL32(220, 50, 50, 220) :
             close ? IM_COL32(200, 140, 0, 220) :
@@ -1421,11 +1292,9 @@ void renderBudgetPanel(AppState& state)
         dl->AddRectFilledMultiColor(
             ImVec2(cp.x + 10, barY), ImVec2(fillX, barY + barH),
             fillL, fillR, fillR, fillL);
-        // Glow at fill tip
         if (frac > 0.01f && frac < 1.0f)
             dl->AddCircleFilled(ImVec2(fillX, barY + barH * 0.5f), 5.0f, fillR, 12);
 
-        // Card border
         ImU32 bordC = over ? IM_COL32(200, 50, 50, 80) :
             close ? IM_COL32(200, 140, 0, 60) :
             IM_COL32(30, 160, 80, 50);
@@ -1448,7 +1317,6 @@ void renderBudgetPanel(AppState& state)
                 used / limit * 100.0, limit - used);
     }
     else {
-        // Empty state
         ImVec2 cp = ImGui::GetCursorScreenPos();
         float  cW = ImGui::GetContentRegionAvail().x;
         dl->AddRectFilled(cp, ImVec2(cp.x + cW, cp.y + 44),
@@ -1463,7 +1331,6 @@ void renderBudgetPanel(AppState& state)
     }
 
     ImGui::Spacing();
-    // Set limit section
     {
         ImVec2 cp2 = ImGui::GetCursorScreenPos();
         float  W2 = ImGui::GetContentRegionAvail().x;
@@ -1499,9 +1366,6 @@ void renderBudgetPanel(AppState& state)
     popBtnStyle();
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderNotifCenter
-// ────────────────────────────────────────────────────────────────────────────
 void renderNotifCenter(AppState& state)
 {
     if (!state.showNotifCenter) return;
@@ -1521,7 +1385,7 @@ void renderNotifCenter(AppState& state)
     pushBtnStyle(COL_BTN_DANGER);
     if (ImGui::SmallButton(" Clear all "))
         state.notifications.clear();
-    popBtnStyle(); popBtnStyle();  // two popBtnStyle for two pushBtnStyle
+    popBtnStyle(); popBtnStyle();       
 
     accentLine();
 
@@ -1555,9 +1419,6 @@ void renderNotifCenter(AppState& state)
     ImGui::PopStyleColor(2);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderSettingsWindow
-// ────────────────────────────────────────────────────────────────────────────
 void renderSettingsWindow(AppState& state)
 {
     if (!state.showSettings) return;
@@ -1626,14 +1487,10 @@ void renderSettingsWindow(AppState& state)
     ImGui::PopStyleColor(2);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderStatusBar
-// ────────────────────────────────────────────────────────────────────────────
 void renderStatusBar(const AppState& state)
 {
     if (state.statusMsg[0] == '\0') return;
 
-    // Thin animated status bar at the bottom
     ImVec2 cp = ImGui::GetCursorScreenPos();
     float  w = ImGui::GetContentRegionAvail().x;
     ImU32 bgC = state.statusError
@@ -1647,9 +1504,6 @@ void renderStatusBar(const AppState& state)
         "%s", state.statusMsg);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderDashboard
-// ────────────────────────────────────────────────────────────────────────────
 void renderDashboard(AppState& state)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -1666,17 +1520,14 @@ void renderDashboard(AppState& state)
         ImGuiWindowFlags_NoBringToFrontOnFocus);
     ImGui::PopStyleVar(2);
 
-    // ── Full window background gradient via DrawList ─────────────────────────
     {
         ImDrawList* bdl = ImGui::GetWindowDrawList();
         bdl->AddRectFilledMultiColor(
             ImVec2(0, 0), ImVec2(W, H),
             IM_COL32(8, 10, 18, 255), IM_COL32(10, 12, 22, 255),
             IM_COL32(12, 10, 20, 255), IM_COL32(8, 10, 18, 255));
-        // Subtle top-left radial glow
         bdl->AddCircleFilled(ImVec2(0, 0), 400,
             IM_COL32(20, 40, 100, 18), 40);
-        // Bottom-right counter glow
         bdl->AddCircleFilled(ImVec2(W, H), 300,
             IM_COL32(10, 60, 40, 14), 40);
     }
@@ -1684,11 +1535,10 @@ void renderDashboard(AppState& state)
     renderHeader(state);
     ImGui::Spacing();
 
-    float avail = H - 68.0f; // height below header
+    float avail = H - 68.0f;    
     float leftW = W * 0.595f;
     float rightW = W - leftW - 4.0f;
 
-    // ── LEFT: expense table ───────────────────────────────────────────────────
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.09f, 0.13f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
     ImGui::BeginChild("##left", ImVec2(leftW, avail - 26), false);
@@ -1699,7 +1549,6 @@ void renderDashboard(AppState& state)
 
     ImGui::SameLine(0, 0);
 
-    // Vertical separator line
     {
         ImVec2 sp = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
@@ -1712,7 +1561,6 @@ void renderDashboard(AppState& state)
         ImGui::SameLine(0, 0);
     }
 
-    // ── RIGHT: sidebar with gradient bg + tabs ────────────────────────────────
     {
         ImVec2 rp = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
@@ -1777,15 +1625,12 @@ void renderDashboard(AppState& state)
 
     renderStatusBar(state);
     ImGui::End();
-    ImGui::PopStyleColor(); // WindowBg
+    ImGui::PopStyleColor();  
 
     renderSettingsWindow(state);
     renderNotifCenter(state);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  renderApp
-// ────────────────────────────────────────────────────────────────────────────
 void renderApp(AppState& state)
 {
     switch (state.currentScreen) {
@@ -1795,9 +1640,6 @@ void renderApp(AppState& state)
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  mainMenu  (GLFW / OpenGL bootstrapper)
-// ────────────────────────────────────────────────────────────────────────────
 void mainMenu()
 {
     if (!glfwInit()) return;
@@ -1812,17 +1654,15 @@ void mainMenu()
         "Spendora", nullptr, nullptr);
     if (!window) { glfwTerminate(); return; }
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);  // vsync
+    glfwSwapInterval(1);   
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
 
-    // ── Style ──────────────────────────────────────────────────────────────
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
 
-    // Shape — more rounded for modern feel
     style.WindowRounding = 10.0f;
     style.ChildRounding = 7.0f;
     style.FrameRounding = 6.0f;
@@ -1831,7 +1671,6 @@ void mainMenu()
     style.GrabRounding = 5.0f;
     style.PopupRounding = 8.0f;
 
-    // Spacing — slightly more breathing room
     style.FramePadding = ImVec2(10, 6);
     style.ItemSpacing = ImVec2(10, 7);
     style.ItemInnerSpacing = ImVec2(7, 5);
@@ -1841,7 +1680,6 @@ void mainMenu()
     style.FrameBorderSize = 0.0f;
     style.TabBorderSize = 0.0f;
 
-    // Colours — deep dark navy base with vivid blue accents
     ImVec4* c = style.Colors;
     c[ImGuiCol_WindowBg] = ImVec4(0.07f, 0.08f, 0.12f, 1.0f);
     c[ImGuiCol_ChildBg] = ImVec4(0.06f, 0.07f, 0.11f, 1.0f);
